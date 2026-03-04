@@ -7,6 +7,7 @@ Linear.app TUI client written in Rust.
 ```bash
 cargo fmt --all          # format
 cargo clippy --all-targets -- -D warnings  # lint
+cargo test               # test
 cargo build              # build
 cargo run                # run (requires auth setup first)
 ```
@@ -18,7 +19,8 @@ cargo run                # run (requires auth setup first)
 - `src/keys.rs` - Keybindings (Controller)
 - `src/event.rs` - Event polling
 - `src/ui/` - Rendering (View): issue_list, issue_detail, popup, project_list, project_detail, cycle_list, cycle_detail
-- `src/api/` - Linear GraphQL client and types
+- `src/api/` - Linear GraphQL client and types (see `docs/api-type-guide.md`)
+- `tests/fixtures/` - API response fixtures for deserialization tests
 - `src/auth/` - OAuth2 + PKCE, token storage, API key fallback
 - `src/config.rs` - Config file + theme (~/.config/linear-tui/config.toml)
 
@@ -36,3 +38,4 @@ cargo run                # run (requires auth setup first)
 - For code navigation (go-to-definition, find references), use the `rust-code-navigator` skill.
 - For refactoring (rename, extract, move), use the `rust-refactor-helper` skill.
 - For code style and naming conventions, use the `coding-guidelines` skill.
+- When adding or modifying API types in `src/api/types.rs`, follow `docs/api-type-guide.md` and always add/update fixture tests in `tests/fixtures/`.
