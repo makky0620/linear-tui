@@ -1,6 +1,7 @@
 ---
 name: conventional-commit
 description: Create commit messages following the Conventional Commits specification
+allowed-tools: Bash, Read, Edit, AskUserQuestion
 ---
 
 # Conventional Commit Skill
@@ -9,13 +10,18 @@ This skill helps create commit messages following the [Conventional Commits](htt
 
 ## Instructions
 
-You are a commit message assistant. Your task is to analyze the current changes and create a well-formatted commit message following the Conventional Commits specification.
+You are a commit message assistant. Your task is to analyze the current changes, split them into logical commits if needed, and create well-formatted commit messages.
 
 ### Steps to Follow
 
-1. **Analyze Changes**: First, run `git status` and `git diff --staged` (or `git diff` if nothing is staged) to understand what has been changed.
+1. **Analyze Changes**: Run `git status` and `git diff --staged` (or `git diff` if nothing is staged) to understand what has been changed.
 
-2. **Determine the Commit Type**: Based on the changes, select the appropriate type:
+2. **Evaluate whether to split**: Group changes by their logical purpose. If changes span multiple types (e.g., tests + docs + chore), split into separate commits. Apply these rules:
+   - **Split when**: Changes have different commit types (test vs docs vs feat), touch unrelated scopes, or serve independent purposes
+   - **Keep together when**: Changes are tightly coupled and one doesn't make sense without the other (e.g., a feature + its test in the same module)
+   - **Ordering**: Commit in dependency order — foundational changes first (e.g., tests before docs that reference them)
+
+3. **Determine the Commit Type** for each commit:
    - `feat`: A new feature
    - `fix`: A bug fix
    - `docs`: Documentation only changes
@@ -28,15 +34,13 @@ You are a commit message assistant. Your task is to analyze the current changes 
    - `chore`: Other changes that don't modify src or test files
    - `revert`: Reverts a previous commit
 
-3. **Identify the Scope** (optional): Determine if there's a specific component, module, or area affected.
+4. **Identify the Scope** (optional): Determine if there's a specific component, module, or area affected.
 
-4. **Write the Description**: Create a concise description in imperative mood (e.g., "add feature" not "added feature").
+5. **Write the Description**: Create a concise description in imperative mood (e.g., "add feature" not "added feature").
 
-5. **Add Body** (if needed): For complex changes, add a body explaining:
-   - The motivation for the change
-   - Contrast with previous behavior
+6. **Add Body** (if needed): For complex changes, add a body explaining the motivation and contrast with previous behavior.
 
-6. **Add Footer** (if needed): Include any breaking changes or issue references.
+7. **Add Footer** (if needed): Include any breaking changes or issue references.
 
 ### Commit Message Format
 
@@ -48,32 +52,19 @@ You are a commit message assistant. Your task is to analyze the current changes 
 [optional footer(s)]
 ```
 
-### Examples
+### Splitting Example
 
-Simple commit:
+Given these unstaged changes:
+- `src/api/types.rs` — added deserialization tests
+- `tests/fixtures/*.json` — new test fixture files
+- `docs/api-type-guide.md` — new documentation
+- `CLAUDE.md` — added rules about API types
+- `.claude/skills/verify/SKILL.md` — added test step
 
-```
-feat: add user authentication
-```
-
-With scope:
-
-```
-fix(parser): handle empty input gracefully
-```
-
-With body and footer:
-
-```
-feat(api): add endpoint for user preferences
-
-Add a new REST endpoint that allows users to save and retrieve
-their application preferences. This enables persistent settings
-across sessions.
-
-BREAKING CHANGE: The /settings endpoint has been renamed to /preferences
-Closes #123
-```
+Split into:
+1. `test(api): add deserialization tests for API types` — types.rs + fixtures/
+2. `docs(api): add API type definition guide` — docs/api-type-guide.md + CLAUDE.md
+3. `chore(verify): add cargo test step to verify skill` — verify/SKILL.md
 
 ### Important Rules
 
@@ -90,7 +81,22 @@ Closes #123
 After analyzing the changes, present the user with:
 
 1. A summary of what changed
-2. The proposed commit message
-3. Ask for confirmation or modifications before executing the commit
+2. The proposed commit(s) — if splitting, show each commit with its files
+3. Ask for confirmation or modifications before executing
 
-If the user provides additional context or wants changes, adjust the message accordingly.
+If the user provides additional context or wants changes, adjust accordingly.
+
+### Execution
+
+For each commit:
+1. Stage only the relevant files with `git add <specific files>`
+2. Commit with the message using a HEREDOC:
+   ```bash
+   git commit -m "$(cat <<'EOF'
+   <commit message here>
+   EOF
+   )"
+   ```
+3. Proceed to the next commit
+
+$ARGUMENTS
