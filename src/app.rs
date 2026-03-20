@@ -651,3 +651,90 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::config::ThemeName;
+
+    use super::*;
+
+    fn make_issue(id: &str, identifier: &str, title: &str) -> Issue {
+        Issue {
+            id: id.to_string(),
+            identifier: identifier.to_string(),
+            title: title.to_string(),
+            priority: Priority::default(),
+            priority_label: None,
+            state: None,
+            assignee: None,
+            labels: None,
+            description: None,
+            created_at: None,
+            updated_at: None,
+            comments: None,
+            project: None,
+            cycle: None,
+        }
+    }
+
+    #[test]
+    fn apply_search_filters_by_title() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.search_query = "login".to_string();
+        sut.apply_search();
+
+        assert_eq!(sut.filtered_issues, vec![0, 2]);
+    }
+
+    #[test]
+    fn apply_search_filters_by_identifier() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.search_query = "ENG-2".to_string();
+        sut.apply_search();
+
+        assert_eq!(sut.filtered_issues, vec![1]);
+    }
+
+    #[test]
+    fn apply_search_empty_query_clears() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.search_query = "".to_string();
+        sut.apply_search();
+
+        assert!(sut.filtered_issues.is_empty());
+    }
+
+    #[test]
+    fn apply_search_resets_index() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.selected_issue_index = 1;
+        sut.search_query = "login".to_string();
+        sut.apply_search();
+
+        assert_eq!(sut.selected_issue_index, 0);
+    }
+}
