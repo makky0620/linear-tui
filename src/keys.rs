@@ -30,6 +30,8 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         InputMode::Normal => handle_normal_mode(app, key),
         InputMode::Search => handle_search_mode(app, key),
         InputMode::Comment => handle_comment_mode(app, key),
+        InputMode::DescriptionConfirm => handle_description_confirm_mode(app, key),
+        InputMode::EditingDescription => {} // handled by main loop
     }
 }
 
@@ -202,6 +204,7 @@ fn handle_issue_detail_keys(app: &mut App, key: KeyEvent) {
         KeyCode::Char('j') | KeyCode::Down => app.scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.scroll_up(),
         KeyCode::Char('g') => app.detail_scroll = 0,
+        KeyCode::Char('e') => app.request_description_edit(),
         _ => {}
     }
 }
@@ -336,5 +339,12 @@ fn handle_comment_mode(app: &mut App, key: KeyEvent) {
             app.comment_input.push(c);
         }
         _ => {}
+    }
+}
+
+fn handle_description_confirm_mode(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Char('y') => app.confirm_description_update(),
+        _ => app.cancel_description_edit(),
     }
 }

@@ -41,6 +41,8 @@ pub enum InputMode {
     Normal,
     Search,
     Comment,
+    EditingDescription,
+    DescriptionConfirm,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -77,6 +79,10 @@ pub enum PendingAction {
     CreateComment {
         issue_id: String,
         body: String,
+    },
+    UpdateDescription {
+        issue_id: String,
+        description: String,
     },
 }
 
@@ -149,6 +155,9 @@ pub struct App {
     // Comment input
     pub comment_input: String,
 
+    // Description edit draft: (issue_id, draft_content)
+    pub description_draft: Option<(String, String)>,
+
     // Pending actions for main loop to execute
     pub pending_action: Option<PendingAction>,
 
@@ -219,6 +228,7 @@ impl App {
             detail_scroll: 0,
             search_query: String::new(),
             comment_input: String::new(),
+            description_draft: None,
             pending_action: None,
             viewer_id: None,
             my_issues: Vec::new(),
@@ -397,6 +407,27 @@ impl App {
         }
         self.input_mode = InputMode::Normal;
         self.comment_input.clear();
+    }
+
+    pub fn request_description_edit(&mut self) {
+        if self.current_issue.is_some() {
+            self.input_mode = InputMode::EditingDescription;
+        }
+    }
+
+    pub fn confirm_description_update(&mut self) {
+        if let Some((issue_id, description)) = self.description_draft.take() {
+            self.pending_action = Some(PendingAction::UpdateDescription {
+                issue_id,
+                description,
+            });
+        }
+        self.input_mode = InputMode::Normal;
+    }
+
+    pub fn cancel_description_edit(&mut self) {
+        self.description_draft = None;
+        self.input_mode = InputMode::Normal;
     }
 
     pub fn apply_status_selection(&mut self) {
@@ -831,6 +862,48 @@ mod tests {
         assert_eq!(actual.len(), 2);
         assert_eq!(actual[0].identifier, "ENG-2");
         assert_eq!(actual[1].identifier, "ENG-3");
+    }
+
+    #[test]
+    fn confirm_description_update_sets_pending_action() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.description_draft = Some(("issue-1".to_string(), "new description".to_string()));
+        sut.input_mode = InputMode::DescriptionConfirm;
+
+        sut.confirm_description_update();
+
+        assert!(matches!(
+            sut.pending_action,
+            Some(PendingAction::UpdateDescription {
+                ref issue_id,
+                ref description,
+            }) if issue_id == "issue-1" && description == "new description"
+        ));
+        assert!(sut.description_draft.is_none());
+        assert_eq!(sut.input_mode, InputMode::Normal);
+    }
+
+    #[test]
+    fn confirm_description_update_noop_when_draft_is_none() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.description_draft = None;
+
+        sut.confirm_description_update();
+
+        assert!(sut.pending_action.is_none());
+        assert_eq!(sut.input_mode, InputMode::Normal);
+    }
+
+    #[test]
+    fn cancel_description_edit_clears_draft_and_returns_to_normal() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.description_draft = Some(("issue-1".to_string(), "draft".to_string()));
+        sut.input_mode = InputMode::DescriptionConfirm;
+
+        sut.cancel_description_edit();
+
+        assert!(sut.description_draft.is_none());
+        assert_eq!(sut.input_mode, InputMode::Normal);
     }
 
     #[test]

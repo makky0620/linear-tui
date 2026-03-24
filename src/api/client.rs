@@ -532,4 +532,27 @@ impl LinearClient {
             .await?;
         Ok(())
     }
+
+    pub async fn update_issue_description(&self, issue_id: &str, description: &str) -> Result<()> {
+        #[derive(Deserialize)]
+        struct Resp {
+            #[serde(rename = "issueUpdate")]
+            _issue_update: MutationSuccess,
+        }
+        let variables = serde_json::json!({
+            "id": issue_id,
+            "description": description,
+        });
+        let _: Resp = self
+            .query(
+                r#"mutation($id: String!, $description: String) {
+                    issueUpdate(id: $id, input: { description: $description }) {
+                        success
+                    }
+                }"#,
+                Some(variables),
+            )
+            .await?;
+        Ok(())
+    }
 }
