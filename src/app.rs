@@ -651,3 +651,214 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+struct IssueBuilder {
+    issue: Issue,
+}
+
+#[cfg(test)]
+impl IssueBuilder {
+    fn new(id: &str, identifier: &str, title: &str) -> Self {
+        Self {
+            issue: Issue {
+                id: id.to_string(),
+                identifier: identifier.to_string(),
+                title: title.to_string(),
+                priority: Priority::default(),
+                priority_label: None,
+                state: None,
+                assignee: None,
+                labels: None,
+                description: None,
+                created_at: None,
+                updated_at: None,
+                comments: None,
+                project: None,
+                cycle: None,
+            },
+        }
+    }
+
+    fn state(mut self, name: &str) -> Self {
+        self.issue.state = Some(WorkflowState {
+            id: name.to_string(),
+            name: name.to_string(),
+            color: None,
+            state_type: None,
+        });
+        self
+    }
+
+    fn priority(mut self, priority: Priority) -> Self {
+        self.issue.priority = priority;
+        self
+    }
+
+    fn build(self) -> Issue {
+        self.issue
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::ThemeName;
+
+    use super::*;
+
+    fn make_issue(id: &str, identifier: &str, title: &str) -> Issue {
+        Issue {
+            id: id.to_string(),
+            identifier: identifier.to_string(),
+            title: title.to_string(),
+            priority: Priority::default(),
+            priority_label: None,
+            state: None,
+            assignee: None,
+            labels: None,
+            description: None,
+            created_at: None,
+            updated_at: None,
+            comments: None,
+            project: None,
+            cycle: None,
+        }
+    }
+
+    #[test]
+    fn apply_search_filters_by_title() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.search_query = "login".to_string();
+        sut.apply_search();
+
+        assert_eq!(sut.filtered_issues, vec![0, 2]);
+    }
+
+    #[test]
+    fn apply_search_filters_by_identifier() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.search_query = "ENG-2".to_string();
+        sut.apply_search();
+
+        assert_eq!(sut.filtered_issues, vec![1]);
+    }
+
+    #[test]
+    fn apply_search_empty_query_clears() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.search_query = "".to_string();
+        sut.apply_search();
+
+        assert!(sut.filtered_issues.is_empty());
+    }
+
+    #[test]
+    fn apply_search_resets_index() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            make_issue("1", "ENG-1", "Fix login bug"),
+            make_issue("2", "ENG-2", "Add dashboard"),
+            make_issue("3", "ENG-3", "Login page redesign"),
+        ];
+
+        sut.selected_issue_index = 1;
+        sut.search_query = "login".to_string();
+        sut.apply_search();
+
+        assert_eq!(sut.selected_issue_index, 0);
+    }
+
+    #[test]
+    fn visible_issues_status_filter() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.issues = vec![
+            IssueBuilder::new("1", "ENG-1", "Fix login bug")
+                .state("In Progress")
+                .build(),
+            IssueBuilder::new("2", "ENG-2", "Add dashboard")
+                .state("Done")
+                .build(),
+            IssueBuilder::new("3", "ENG-3", "Login page redesign")
+                .state("In Progress")
+                .build(),
+        ];
+
+        sut.filters.status = Some("In Progress".to_string());
+        let actual = sut.visible_issues();
+
+        assert_eq!(actual.len(), 2);
+        assert_eq!(actual[0].identifier, "ENG-1");
+        assert_eq!(actual[1].identifier, "ENG-3");
+    }
+
+    #[test]
+    fn visible_issues_priority_filter() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+
+        sut.issues = vec![
+            IssueBuilder::new("1", "ENG-1", "Fix login bug")
+                .priority(Priority::Low)
+                .build(),
+            IssueBuilder::new("2", "ENG-2", "Add dashboard")
+                .priority(Priority::High)
+                .build(),
+            IssueBuilder::new("3", "ENG-3", "Login page redesign")
+                .priority(Priority::High)
+                .build(),
+        ];
+
+        sut.filters.priority = Some(Priority::High);
+        let actual = sut.visible_issues();
+
+        assert_eq!(actual.len(), 2);
+        assert_eq!(actual[0].identifier, "ENG-2");
+        assert_eq!(actual[1].identifier, "ENG-3");
+    }
+
+    #[test]
+    fn visible_issues_search_and_status_combined() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+
+        sut.issues = vec![
+            IssueBuilder::new("1", "ENG-1", "Fix login bug")
+                .state("In Progress")
+                .build(),
+            IssueBuilder::new("2", "ENG-2", "Add login feature")
+                .state("Todo")
+                .build(),
+            IssueBuilder::new("3", "ENG-3", "Fix payment bug")
+                .state("In Progress")
+                .build(),
+            IssueBuilder::new("4", "ENG-4", "Update docs")
+                .state("In Progress")
+                .build(),
+        ];
+
+        sut.filters.status = Some("In Progress".to_string());
+        sut.search_query = "login".to_string();
+        sut.apply_search();
+
+        let actual = sut.visible_issues();
+
+        assert_eq!(actual.len(), 1);
+        assert_eq!(actual[0].identifier, "ENG-1");
+    }
+}
