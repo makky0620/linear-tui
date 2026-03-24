@@ -142,8 +142,8 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(body, chunks[1]);
 
     // Footer
-    let footer_content = if app.input_mode == InputMode::Comment {
-        Line::from(vec![
+    let footer_content = match app.input_mode {
+        InputMode::Comment => Line::from(vec![
             Span::styled(" Comment: ", Style::default().fg(th.warning)),
             Span::raw(&app.comment_input),
             Span::styled("_", Style::default().fg(th.muted)),
@@ -151,9 +151,15 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
                 "  (Ctrl+Enter to send, Esc to cancel)",
                 Style::default().fg(th.text_dim),
             ),
-        ])
-    } else {
-        Line::from(vec![
+        ]),
+        InputMode::DescriptionConfirm => Line::from(vec![
+            Span::styled(" 保存しますか？ ", Style::default().fg(th.warning)),
+            Span::styled("y", Style::default().fg(th.accent)),
+            Span::raw(":yes "),
+            Span::styled("n/Esc", Style::default().fg(th.accent)),
+            Span::raw(":cancel"),
+        ]),
+        _ => Line::from(vec![
             Span::styled(" Esc/q", Style::default().fg(th.accent)),
             Span::raw(":back "),
             Span::styled("j/k", Style::default().fg(th.accent)),
@@ -165,8 +171,10 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
             Span::styled("a", Style::default().fg(th.accent)),
             Span::raw(":assign "),
             Span::styled("c", Style::default().fg(th.accent)),
-            Span::raw(":comment"),
-        ])
+            Span::raw(":comment "),
+            Span::styled("e", Style::default().fg(th.accent)),
+            Span::raw(":edit desc"),
+        ]),
     };
     f.render_widget(Paragraph::new(footer_content), chunks[2]);
 }
