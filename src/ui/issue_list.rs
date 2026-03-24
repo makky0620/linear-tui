@@ -147,7 +147,10 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
             Span::raw(&app.search_query),
             Span::styled("_", Style::default().fg(th.muted)),
         ]),
-        InputMode::Comment | InputMode::Normal => {
+        InputMode::Comment
+        | InputMode::Normal
+        | InputMode::EditingDescription
+        | InputMode::DescriptionConfirm => {
             if let Some(msg) = &app.status_message {
                 Line::from(Span::styled(
                     format!(" {msg}"),

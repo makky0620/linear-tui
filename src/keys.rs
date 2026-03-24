@@ -30,6 +30,7 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         InputMode::Normal => handle_normal_mode(app, key),
         InputMode::Search => handle_search_mode(app, key),
         InputMode::Comment => handle_comment_mode(app, key),
+        InputMode::EditingDescription | InputMode::DescriptionConfirm => {}
     }
 }
 

@@ -356,6 +356,12 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
                         Err(e) => app.set_error(format!("Failed to post comment: {e}")),
                     }
                 }
+                PendingAction::UpdateDescription {
+                    issue_id: _,
+                    description: _,
+                } => {
+                    // TODO: implement in Task 6
+                }
             }
             app.loading = false;
         }
