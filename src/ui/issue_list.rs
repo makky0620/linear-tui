@@ -150,7 +150,8 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
         InputMode::Comment
         | InputMode::Normal
         | InputMode::EditingDescription
-        | InputMode::DescriptionConfirm => {
+        | InputMode::DescriptionConfirm
+        | InputMode::CreateIssue => {
             if let Some(msg) = &app.status_message {
                 Line::from(Span::styled(
                     format!(" {msg}"),

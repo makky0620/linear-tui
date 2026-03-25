@@ -32,6 +32,7 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         InputMode::Comment => handle_comment_mode(app, key),
         InputMode::DescriptionConfirm => handle_description_confirm_mode(app, key),
         InputMode::EditingDescription => {} // handled by main loop
+        InputMode::CreateIssue => {} // handled by main loop
     }
 }
 

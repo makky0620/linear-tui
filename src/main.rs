@@ -409,6 +409,9 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
                         Err(e) => app.set_error(format!("Failed to update description: {e}")),
                     }
                 }
+                PendingAction::CreateIssue { .. } => {
+                    // TODO: implement in Task 5
+                }
             }
             app.loading = false;
         }
