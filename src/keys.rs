@@ -32,7 +32,7 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
         InputMode::Comment => handle_comment_mode(app, key),
         InputMode::DescriptionConfirm => handle_description_confirm_mode(app, key),
         InputMode::EditingDescription => {} // handled by main loop
-        InputMode::CreateIssue => {} // handled by main loop
+        InputMode::CreateIssue => handle_create_issue_mode(app, key),
     }
 }
 
@@ -118,10 +118,6 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
                 app.open_assignee_change();
                 return;
             }
-            KeyCode::Char('c') => {
-                app.start_comment();
-                return;
-            }
             _ => {}
         }
     }
@@ -157,6 +153,7 @@ fn handle_issue_list_keys(app: &mut App, key: KeyEvent) {
             app.input_mode = InputMode::Search;
             app.search_query.clear();
         }
+        KeyCode::Char('c') => app.start_create_issue(),
         KeyCode::Esc => {
             if !app.search_query.is_empty() {
                 app.search_query.clear();
@@ -206,6 +203,7 @@ fn handle_issue_detail_keys(app: &mut App, key: KeyEvent) {
         KeyCode::Char('k') | KeyCode::Up => app.scroll_up(),
         KeyCode::Char('g') => app.detail_scroll = 0,
         KeyCode::Char('e') => app.request_description_edit(),
+        KeyCode::Char('c') => app.start_comment(),
         _ => {}
     }
 }
@@ -250,6 +248,7 @@ fn handle_project_detail_keys(app: &mut App, key: KeyEvent) {
                 app.open_issue_from_list(&issue);
             }
         }
+        KeyCode::Char('c') => app.start_comment(),
         _ => {}
     }
 }
@@ -291,6 +290,7 @@ fn handle_cycle_detail_keys(app: &mut App, key: KeyEvent) {
                 app.open_issue_from_list(&issue);
             }
         }
+        KeyCode::Char('c') => app.start_comment(),
         _ => {}
     }
 }
@@ -339,6 +339,22 @@ fn handle_comment_mode(app: &mut App, key: KeyEvent) {
         KeyCode::Char(c) => {
             app.comment_input.push(c);
         }
+        _ => {}
+    }
+}
+
+fn handle_create_issue_mode(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc => {
+            app.input_mode = InputMode::Normal;
+            app.create_issue_title.clear();
+        }
+        // Plain Enter submits — title is a single-line field
+        KeyCode::Enter => app.submit_create_issue(),
+        KeyCode::Backspace => {
+            app.create_issue_title.pop();
+        }
+        KeyCode::Char(c) => app.create_issue_title.push(c),
         _ => {}
     }
 }
