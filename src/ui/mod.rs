@@ -168,7 +168,7 @@ fn draw_help(f: &mut Frame, app: &App) {
         key_line("s", "Change status"),
         key_line("p", "Change priority"),
         key_line("a", "Change assignee"),
-        key_line("c", "Add comment"),
+        key_line("c", "Create issue (list) / Add comment (detail)"),
         Line::from(""),
         section("Other"),
         key_line("t", "Switch team"),
