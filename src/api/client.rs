@@ -555,4 +555,27 @@ impl LinearClient {
             .await?;
         Ok(())
     }
+
+    pub async fn create_issue(&self, team_id: &str, title: &str) -> Result<()> {
+        #[derive(Deserialize)]
+        struct Resp {
+            #[serde(rename = "issueCreate")]
+            _issue_create: MutationSuccess,
+        }
+        let variables = serde_json::json!({
+            "teamId": team_id,
+            "title": title,
+        });
+        let _: Resp = self
+            .query(
+                r#"mutation($teamId: String!, $title: String!) {
+                    issueCreate(input: { teamId: $teamId, title: $title }) {
+                        success
+                    }
+                }"#,
+                Some(variables),
+            )
+            .await?;
+        Ok(())
+    }
 }

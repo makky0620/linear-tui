@@ -147,6 +147,15 @@ fn draw_footer(f: &mut Frame, app: &App, area: Rect) {
             Span::raw(&app.search_query),
             Span::styled("_", Style::default().fg(th.muted)),
         ]),
+        InputMode::CreateIssue => Line::from(vec![
+            Span::styled(" New issue title: ", Style::default().fg(th.warning)),
+            Span::raw(&app.create_issue_title),
+            Span::styled("_", Style::default().fg(th.muted)),
+            Span::styled(
+                "  (Enter to create, Esc to cancel)",
+                Style::default().fg(th.text_dim),
+            ),
+        ]),
         InputMode::Comment
         | InputMode::Normal
         | InputMode::EditingDescription

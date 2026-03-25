@@ -409,6 +409,16 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
                         Err(e) => app.set_error(format!("Failed to update description: {e}")),
                     }
                 }
+                PendingAction::CreateIssue { team_id, title } => {
+                    match client.create_issue(team_id, title).await {
+                        Ok(()) => {
+                            app.set_status("Issue created");
+                            // Reloads current team's issues list; selected_issue_index resets to 0
+                            app.needs_reload = true;
+                        }
+                        Err(e) => app.set_error(format!("Failed to create issue: {e}")),
+                    }
+                }
             }
             app.loading = false;
         }

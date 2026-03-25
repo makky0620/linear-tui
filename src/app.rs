@@ -43,6 +43,7 @@ pub enum InputMode {
     Comment,
     EditingDescription,
     DescriptionConfirm,
+    CreateIssue,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -83,6 +84,10 @@ pub enum PendingAction {
     UpdateDescription {
         issue_id: String,
         description: String,
+    },
+    CreateIssue {
+        team_id: String,
+        title: String,
     },
 }
 
@@ -154,6 +159,9 @@ pub struct App {
 
     // Comment input
     pub comment_input: String,
+
+    // Create issue title input
+    pub create_issue_title: String,
 
     // Description edit draft: (issue_id, draft_content)
     pub description_draft: Option<(String, String)>,
@@ -228,6 +236,7 @@ impl App {
             detail_scroll: 0,
             search_query: String::new(),
             comment_input: String::new(),
+            create_issue_title: String::new(),
             description_draft: None,
             pending_action: None,
             viewer_id: None,
@@ -393,6 +402,27 @@ impl App {
         if self.focused_issue().is_some() {
             self.input_mode = InputMode::Comment;
             self.comment_input.clear();
+        }
+    }
+
+    pub fn start_create_issue(&mut self) {
+        if self.current_team().is_some() {
+            self.input_mode = InputMode::CreateIssue;
+            self.create_issue_title.clear();
+        }
+    }
+
+    pub fn submit_create_issue(&mut self) {
+        if self.create_issue_title.is_empty() {
+            return; // stay in CreateIssue mode, let user keep typing
+        }
+        if let Some(team) = self.current_team() {
+            self.pending_action = Some(PendingAction::CreateIssue {
+                team_id: team.id.clone(),
+                title: self.create_issue_title.clone(),
+            });
+            self.input_mode = InputMode::Normal;
+            self.create_issue_title.clear();
         }
     }
 
@@ -904,6 +934,84 @@ mod tests {
 
         assert!(sut.description_draft.is_none());
         assert_eq!(sut.input_mode, InputMode::Normal);
+    }
+
+    #[test]
+    fn start_create_issue_sets_mode_and_clears_title_when_team_present() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.teams = vec![Team {
+            id: "team-1".to_string(),
+            name: "Eng".to_string(),
+            key: "ENG".to_string(),
+        }];
+        sut.selected_team_index = 0;
+        sut.create_issue_title = "old title".to_string();
+
+        sut.start_create_issue();
+
+        assert_eq!(sut.input_mode, InputMode::CreateIssue);
+        assert!(sut.create_issue_title.is_empty());
+    }
+
+    #[test]
+    fn start_create_issue_is_noop_when_no_team() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.start_create_issue();
+        assert_eq!(sut.input_mode, InputMode::Normal);
+    }
+
+    #[test]
+    fn submit_create_issue_with_title_sets_pending_action() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.teams = vec![Team {
+            id: "team-1".to_string(),
+            name: "Eng".to_string(),
+            key: "ENG".to_string(),
+        }];
+        sut.selected_team_index = 0;
+        sut.input_mode = InputMode::CreateIssue;
+        sut.create_issue_title = "My new issue".to_string();
+
+        sut.submit_create_issue();
+
+        assert!(matches!(
+            sut.pending_action,
+            Some(PendingAction::CreateIssue { ref team_id, ref title })
+                if team_id == "team-1" && title == "My new issue"
+        ));
+        assert_eq!(sut.input_mode, InputMode::Normal);
+        assert!(sut.create_issue_title.is_empty());
+    }
+
+    #[test]
+    fn submit_create_issue_with_empty_title_stays_in_create_issue_mode() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.teams = vec![Team {
+            id: "team-1".to_string(),
+            name: "Eng".to_string(),
+            key: "ENG".to_string(),
+        }];
+        sut.selected_team_index = 0;
+        sut.input_mode = InputMode::CreateIssue;
+        sut.create_issue_title = String::new();
+
+        sut.submit_create_issue();
+
+        assert!(sut.pending_action.is_none());
+        assert_eq!(sut.input_mode, InputMode::CreateIssue);
+    }
+
+    #[test]
+    fn submit_create_issue_with_title_but_no_team_is_noop() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        // teams intentionally empty
+        sut.input_mode = InputMode::CreateIssue;
+        sut.create_issue_title = "Something".to_string();
+
+        sut.submit_create_issue();
+
+        assert!(sut.pending_action.is_none());
+        assert_eq!(sut.input_mode, InputMode::CreateIssue);
     }
 
     #[test]
