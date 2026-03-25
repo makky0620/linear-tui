@@ -939,7 +939,11 @@ mod tests {
     #[test]
     fn start_create_issue_sets_mode_and_clears_title_when_team_present() {
         let mut sut = App::new(Theme::from_name(ThemeName::Default));
-        sut.teams = vec![Team { id: "team-1".to_string(), name: "Eng".to_string(), key: "ENG".to_string() }];
+        sut.teams = vec![Team {
+            id: "team-1".to_string(),
+            name: "Eng".to_string(),
+            key: "ENG".to_string(),
+        }];
         sut.selected_team_index = 0;
         sut.create_issue_title = "old title".to_string();
 
@@ -959,7 +963,11 @@ mod tests {
     #[test]
     fn submit_create_issue_with_title_sets_pending_action() {
         let mut sut = App::new(Theme::from_name(ThemeName::Default));
-        sut.teams = vec![Team { id: "team-1".to_string(), name: "Eng".to_string(), key: "ENG".to_string() }];
+        sut.teams = vec![Team {
+            id: "team-1".to_string(),
+            name: "Eng".to_string(),
+            key: "ENG".to_string(),
+        }];
         sut.selected_team_index = 0;
         sut.input_mode = InputMode::CreateIssue;
         sut.create_issue_title = "My new issue".to_string();
@@ -978,7 +986,11 @@ mod tests {
     #[test]
     fn submit_create_issue_with_empty_title_stays_in_create_issue_mode() {
         let mut sut = App::new(Theme::from_name(ThemeName::Default));
-        sut.teams = vec![Team { id: "team-1".to_string(), name: "Eng".to_string(), key: "ENG".to_string() }];
+        sut.teams = vec![Team {
+            id: "team-1".to_string(),
+            name: "Eng".to_string(),
+            key: "ENG".to_string(),
+        }];
         sut.selected_team_index = 0;
         sut.input_mode = InputMode::CreateIssue;
         sut.create_issue_title = String::new();
