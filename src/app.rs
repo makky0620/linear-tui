@@ -382,7 +382,6 @@ impl App {
         self.pending_status_filter = self.filters.status.clone();
     }
 
-    #[allow(dead_code)] // used in Task 5 (keys.rs Space handler)
     pub fn toggle_status_filter(&mut self, index: usize) {
         if index == 0 {
             self.pending_status_filter.clear();

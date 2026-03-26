@@ -37,10 +37,17 @@ pub fn handle_key(app: &mut App, key: KeyEvent) {
 }
 
 fn handle_popup_keys(app: &mut App, key: KeyEvent) {
+    use crate::app::FilterKind;
+
     match key.code {
         KeyCode::Esc | KeyCode::Char('q') => app.close_popup(),
         KeyCode::Char('j') | KeyCode::Down => app.popup_next(),
         KeyCode::Char('k') | KeyCode::Up => app.popup_prev(),
+        KeyCode::Char(' ') => {
+            if app.popup == Popup::Filter && app.filter_kind == FilterKind::Status {
+                app.toggle_status_filter(app.popup_index);
+            }
+        }
         KeyCode::Enter => match app.popup {
             Popup::TeamSelect => app.select_team(),
             Popup::Filter => app.apply_filter_selection(),
@@ -50,6 +57,10 @@ fn handle_popup_keys(app: &mut App, key: KeyEvent) {
             Popup::None => {}
         },
         KeyCode::Char(c @ '1'..='9') => {
+            // Numeric shortcuts are suppressed during the multi-select Status filter step
+            if app.popup == Popup::Filter && app.filter_kind == FilterKind::Status {
+                return;
+            }
             let idx = (c as usize) - ('1' as usize);
             if idx < app.popup_list_len() {
                 app.popup_index = idx;
