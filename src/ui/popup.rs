@@ -73,6 +73,14 @@ fn numbered_item(index: usize, text: &str, is_current: bool, th: &Theme) -> List
     ]))
 }
 
+fn checkbox_item(text: &str, is_checked: bool, th: &Theme) -> ListItem<'static> {
+    let checkbox = if is_checked { "[x] " } else { "[ ] " };
+    ListItem::new(Line::from(vec![
+        Span::styled(checkbox, Style::default().fg(th.accent)),
+        Span::raw(text.to_string()),
+    ]))
+}
+
 fn draw_team_select(f: &mut Frame, app: &App) {
     let th = &app.theme;
     let items: Vec<ListItem> = app
@@ -95,16 +103,19 @@ fn draw_filter(f: &mut Frame, app: &App) {
     let th = &app.theme;
     let (title, items) = match app.filter_kind {
         FilterKind::Status => {
-            let mut items = vec![numbered_item(0, "All", app.filters.status.is_none(), th)];
-            for (i, state) in app.workflow_states.iter().enumerate() {
-                let is_current = app
-                    .filters
-                    .status
-                    .as_ref()
-                    .is_some_and(|s| s == &state.name);
-                items.push(numbered_item(i + 1, &state.name, is_current, th));
+            let mut items = vec![checkbox_item(
+                "All",
+                app.pending_status_filter.is_empty(),
+                th,
+            )];
+            for state in &app.workflow_states {
+                let is_checked = app.pending_status_filter.contains(&state.name);
+                items.push(checkbox_item(&state.name, is_checked, th));
             }
-            (" Filter: Status ", items)
+            (
+                " Filter: Status (Space to toggle, Enter to confirm) ",
+                items,
+            )
         }
         FilterKind::Priority => {
             let labels = ["All", "Urgent", "High", "Medium", "Low", "None"];
@@ -123,7 +134,11 @@ fn draw_filter(f: &mut Frame, app: &App) {
             (" Filter: Priority ", items)
         }
     };
-    render_popup_list(f, title, items, app.popup_index, 35, th);
+    let width = match app.filter_kind {
+        FilterKind::Status => 54,
+        FilterKind::Priority => 35,
+    };
+    render_popup_list(f, title, items, app.popup_index, width, th);
 }
 
 fn draw_status_change(f: &mut Frame, app: &App) {

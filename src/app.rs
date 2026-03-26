@@ -1,5 +1,6 @@
 use crate::api::types::*;
 use crate::config::Theme;
+use std::collections::BTreeSet;
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -93,24 +94,25 @@ pub enum PendingAction {
 
 #[derive(Debug, Clone, Default)]
 pub struct Filters {
-    pub status: Option<String>,
+    pub status: BTreeSet<String>,
     pub priority: Option<Priority>,
 }
 
 impl Filters {
     pub fn is_active(&self) -> bool {
-        self.status.is_some() || self.priority.is_some()
+        !self.status.is_empty() || self.priority.is_some()
     }
 
     pub fn clear(&mut self) {
-        self.status = None;
+        self.status.clear();
         self.priority = None;
     }
 
     pub fn summary(&self) -> String {
         let mut parts = Vec::new();
-        if let Some(s) = &self.status {
-            parts.push(format!("Status:{s}"));
+        if !self.status.is_empty() {
+            let names = self.status.iter().cloned().collect::<Vec<_>>().join(",");
+            parts.push(format!("Status:{names}"));
         }
         if let Some(p) = self.priority {
             parts.push(format!("Priority:{}", p.label()));
@@ -149,6 +151,7 @@ pub struct App {
     pub filters: Filters,
     pub filter_kind: FilterKind,
     pub workflow_states: Vec<WorkflowState>,
+    pub pending_status_filter: BTreeSet<String>,
 
     // Issue detail
     pub current_issue: Option<Issue>,
@@ -232,6 +235,7 @@ impl App {
             filters: Filters::default(),
             filter_kind: FilterKind::Status,
             workflow_states: Vec::new(),
+            pending_status_filter: BTreeSet::new(),
             current_issue: None,
             detail_scroll: 0,
             search_query: String::new(),
@@ -299,9 +303,9 @@ impl App {
 
         base.into_iter()
             .filter(|issue| {
-                if let Some(status) = &self.filters.status {
+                if !self.filters.status.is_empty() {
                     if let Some(state) = &issue.state {
-                        if &state.name != status {
+                        if !self.filters.status.contains(&state.name) {
                             return false;
                         }
                     } else {
@@ -375,6 +379,18 @@ impl App {
         self.popup = Popup::Filter;
         self.popup_index = 0;
         self.filter_kind = FilterKind::Status;
+        self.pending_status_filter = self.filters.status.clone();
+    }
+
+    pub fn toggle_status_filter(&mut self, index: usize) {
+        if index == 0 {
+            self.pending_status_filter.clear();
+        } else if let Some(state) = self.workflow_states.get(index - 1) {
+            let name = state.name.clone();
+            if !self.pending_status_filter.remove(&name) {
+                self.pending_status_filter.insert(name);
+            }
+        }
     }
 
     pub fn open_status_change(&mut self) {
@@ -534,11 +550,7 @@ impl App {
     pub fn apply_filter_selection(&mut self) {
         match self.filter_kind {
             FilterKind::Status => {
-                if self.popup_index == 0 {
-                    self.filters.status = None;
-                } else if let Some(state) = self.workflow_states.get(self.popup_index - 1) {
-                    self.filters.status = Some(state.name.clone());
-                }
+                self.filters.status = self.pending_status_filter.clone();
                 self.filter_kind = FilterKind::Priority;
                 self.popup_index = 0;
             }
@@ -862,7 +874,7 @@ mod tests {
                 .build(),
         ];
 
-        sut.filters.status = Some("In Progress".to_string());
+        sut.filters.status = BTreeSet::from(["In Progress".to_string()]);
         let actual = sut.visible_issues();
 
         assert_eq!(actual.len(), 2);
@@ -1015,6 +1027,59 @@ mod tests {
     }
 
     #[test]
+    fn toggle_status_filter_adds_state() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.workflow_states = vec![
+            WorkflowState {
+                id: "1".into(),
+                name: "Todo".into(),
+                color: None,
+                state_type: Some(StateType::Started),
+            },
+            WorkflowState {
+                id: "2".into(),
+                name: "Done".into(),
+                color: None,
+                state_type: Some(StateType::Completed),
+            },
+        ];
+        sut.toggle_status_filter(1); // index 1 = workflow_states[0] = "Todo"
+        assert!(sut.pending_status_filter.contains("Todo"));
+        assert!(!sut.pending_status_filter.contains("Done"));
+    }
+
+    #[test]
+    fn toggle_status_filter_removes_state() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.workflow_states = vec![WorkflowState {
+            id: "1".into(),
+            name: "Todo".into(),
+            color: None,
+            state_type: Some(StateType::Started),
+        }];
+        sut.pending_status_filter.insert("Todo".into());
+        sut.toggle_status_filter(1); // toggle off
+        assert!(!sut.pending_status_filter.contains("Todo"));
+    }
+
+    #[test]
+    fn toggle_status_filter_all_clears_set() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.pending_status_filter.insert("Todo".into());
+        sut.pending_status_filter.insert("Done".into());
+        sut.toggle_status_filter(0); // index 0 = "All" = clear
+        assert!(sut.pending_status_filter.is_empty());
+    }
+
+    #[test]
+    fn open_filter_snapshots_current_status_filter() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.filters.status = BTreeSet::from(["In Progress".to_string()]);
+        sut.open_filter();
+        assert_eq!(sut.pending_status_filter, sut.filters.status);
+    }
+
+    #[test]
     fn visible_issues_search_and_status_combined() {
         let mut sut = App::new(Theme::from_name(ThemeName::Default));
 
@@ -1033,7 +1098,7 @@ mod tests {
                 .build(),
         ];
 
-        sut.filters.status = Some("In Progress".to_string());
+        sut.filters.status = BTreeSet::from(["In Progress".to_string()]);
         sut.search_query = "login".to_string();
         sut.apply_search();
 
