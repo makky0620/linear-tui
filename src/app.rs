@@ -1,5 +1,6 @@
 use crate::api::types::*;
 use crate::config::Theme;
+use std::collections::BTreeSet;
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
@@ -93,24 +94,25 @@ pub enum PendingAction {
 
 #[derive(Debug, Clone, Default)]
 pub struct Filters {
-    pub status: Option<String>,
+    pub status: BTreeSet<String>,
     pub priority: Option<Priority>,
 }
 
 impl Filters {
     pub fn is_active(&self) -> bool {
-        self.status.is_some() || self.priority.is_some()
+        !self.status.is_empty() || self.priority.is_some()
     }
 
     pub fn clear(&mut self) {
-        self.status = None;
+        self.status.clear();
         self.priority = None;
     }
 
     pub fn summary(&self) -> String {
         let mut parts = Vec::new();
-        if let Some(s) = &self.status {
-            parts.push(format!("Status:{s}"));
+        if !self.status.is_empty() {
+            let names = self.status.iter().cloned().collect::<Vec<_>>().join(",");
+            parts.push(format!("Status:{names}"));
         }
         if let Some(p) = self.priority {
             parts.push(format!("Priority:{}", p.label()));
@@ -149,6 +151,7 @@ pub struct App {
     pub filters: Filters,
     pub filter_kind: FilterKind,
     pub workflow_states: Vec<WorkflowState>,
+    pub pending_status_filter: BTreeSet<String>,
 
     // Issue detail
     pub current_issue: Option<Issue>,
@@ -232,6 +235,7 @@ impl App {
             filters: Filters::default(),
             filter_kind: FilterKind::Status,
             workflow_states: Vec::new(),
+            pending_status_filter: BTreeSet::new(),
             current_issue: None,
             detail_scroll: 0,
             search_query: String::new(),
@@ -299,9 +303,9 @@ impl App {
 
         base.into_iter()
             .filter(|issue| {
-                if let Some(status) = &self.filters.status {
+                if !self.filters.status.is_empty() {
                     if let Some(state) = &issue.state {
-                        if &state.name != status {
+                        if !self.filters.status.contains(&state.name) {
                             return false;
                         }
                     } else {
@@ -535,9 +539,14 @@ impl App {
         match self.filter_kind {
             FilterKind::Status => {
                 if self.popup_index == 0 {
-                    self.filters.status = None;
+                    self.filters.status.clear();
                 } else if let Some(state) = self.workflow_states.get(self.popup_index - 1) {
-                    self.filters.status = Some(state.name.clone());
+                    let name = state.name.clone();
+                    if self.filters.status.contains(&name) {
+                        self.filters.status.remove(&name);
+                    } else {
+                        self.filters.status.insert(name);
+                    }
                 }
                 self.filter_kind = FilterKind::Priority;
                 self.popup_index = 0;
@@ -862,7 +871,7 @@ mod tests {
                 .build(),
         ];
 
-        sut.filters.status = Some("In Progress".to_string());
+        sut.filters.status = BTreeSet::from(["In Progress".to_string()]);
         let actual = sut.visible_issues();
 
         assert_eq!(actual.len(), 2);
@@ -1033,7 +1042,7 @@ mod tests {
                 .build(),
         ];
 
-        sut.filters.status = Some("In Progress".to_string());
+        sut.filters.status = BTreeSet::from(["In Progress".to_string()]);
         sut.search_query = "login".to_string();
         sut.apply_search();
 

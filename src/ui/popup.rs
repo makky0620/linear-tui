@@ -95,13 +95,9 @@ fn draw_filter(f: &mut Frame, app: &App) {
     let th = &app.theme;
     let (title, items) = match app.filter_kind {
         FilterKind::Status => {
-            let mut items = vec![numbered_item(0, "All", app.filters.status.is_none(), th)];
+            let mut items = vec![numbered_item(0, "All", app.filters.status.is_empty(), th)];
             for (i, state) in app.workflow_states.iter().enumerate() {
-                let is_current = app
-                    .filters
-                    .status
-                    .as_ref()
-                    .is_some_and(|s| s == &state.name);
+                let is_current = app.filters.status.contains(&state.name);
                 items.push(numbered_item(i + 1, &state.name, is_current, th));
             }
             (" Filter: Status ", items)
