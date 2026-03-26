@@ -379,6 +379,7 @@ impl App {
         self.popup = Popup::Filter;
         self.popup_index = 0;
         self.filter_kind = FilterKind::Status;
+        self.pending_status_filter = self.filters.status.clone();
     }
 
     pub fn open_status_change(&mut self) {
@@ -538,16 +539,7 @@ impl App {
     pub fn apply_filter_selection(&mut self) {
         match self.filter_kind {
             FilterKind::Status => {
-                if self.popup_index == 0 {
-                    self.filters.status.clear();
-                } else if let Some(state) = self.workflow_states.get(self.popup_index - 1) {
-                    let name = state.name.clone();
-                    if self.filters.status.contains(&name) {
-                        self.filters.status.remove(&name);
-                    } else {
-                        self.filters.status.insert(name);
-                    }
-                }
+                self.filters.status = self.pending_status_filter.clone();
                 self.filter_kind = FilterKind::Priority;
                 self.popup_index = 0;
             }
