@@ -382,6 +382,17 @@ impl App {
         self.pending_status_filter = self.filters.status.clone();
     }
 
+    pub fn toggle_status_filter(&mut self, index: usize) {
+        if index == 0 {
+            self.pending_status_filter.clear();
+        } else if let Some(state) = self.workflow_states.get(index - 1) {
+            let name = state.name.clone();
+            if !self.pending_status_filter.remove(&name) {
+                self.pending_status_filter.insert(name);
+            }
+        }
+    }
+
     pub fn open_status_change(&mut self) {
         if self.focused_issue().is_some() {
             self.popup = Popup::StatusChange;
@@ -1013,6 +1024,46 @@ mod tests {
 
         assert!(sut.pending_action.is_none());
         assert_eq!(sut.input_mode, InputMode::CreateIssue);
+    }
+
+    #[test]
+    fn toggle_status_filter_adds_state() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.workflow_states = vec![
+            WorkflowState { id: "1".into(), name: "Todo".into(), color: None, state_type: Some(StateType::Started) },
+            WorkflowState { id: "2".into(), name: "Done".into(), color: None, state_type: Some(StateType::Completed) },
+        ];
+        sut.toggle_status_filter(1); // index 1 = workflow_states[0] = "Todo"
+        assert!(sut.pending_status_filter.contains("Todo"));
+        assert!(!sut.pending_status_filter.contains("Done"));
+    }
+
+    #[test]
+    fn toggle_status_filter_removes_state() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.workflow_states = vec![
+            WorkflowState { id: "1".into(), name: "Todo".into(), color: None, state_type: Some(StateType::Started) },
+        ];
+        sut.pending_status_filter.insert("Todo".into());
+        sut.toggle_status_filter(1); // toggle off
+        assert!(!sut.pending_status_filter.contains("Todo"));
+    }
+
+    #[test]
+    fn toggle_status_filter_all_clears_set() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.pending_status_filter.insert("Todo".into());
+        sut.pending_status_filter.insert("Done".into());
+        sut.toggle_status_filter(0); // index 0 = "All" = clear
+        assert!(sut.pending_status_filter.is_empty());
+    }
+
+    #[test]
+    fn open_filter_snapshots_current_status_filter() {
+        let mut sut = App::new(Theme::from_name(ThemeName::Default));
+        sut.filters.status = BTreeSet::from(["In Progress".to_string()]);
+        sut.open_filter();
+        assert_eq!(sut.pending_status_filter, sut.filters.status);
     }
 
     #[test]
