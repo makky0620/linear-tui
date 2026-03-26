@@ -1031,8 +1031,18 @@ mod tests {
     fn toggle_status_filter_adds_state() {
         let mut sut = App::new(Theme::from_name(ThemeName::Default));
         sut.workflow_states = vec![
-            WorkflowState { id: "1".into(), name: "Todo".into(), color: None, state_type: Some(StateType::Started) },
-            WorkflowState { id: "2".into(), name: "Done".into(), color: None, state_type: Some(StateType::Completed) },
+            WorkflowState {
+                id: "1".into(),
+                name: "Todo".into(),
+                color: None,
+                state_type: Some(StateType::Started),
+            },
+            WorkflowState {
+                id: "2".into(),
+                name: "Done".into(),
+                color: None,
+                state_type: Some(StateType::Completed),
+            },
         ];
         sut.toggle_status_filter(1); // index 1 = workflow_states[0] = "Todo"
         assert!(sut.pending_status_filter.contains("Todo"));
@@ -1042,9 +1052,12 @@ mod tests {
     #[test]
     fn toggle_status_filter_removes_state() {
         let mut sut = App::new(Theme::from_name(ThemeName::Default));
-        sut.workflow_states = vec![
-            WorkflowState { id: "1".into(), name: "Todo".into(), color: None, state_type: Some(StateType::Started) },
-        ];
+        sut.workflow_states = vec![WorkflowState {
+            id: "1".into(),
+            name: "Todo".into(),
+            color: None,
+            state_type: Some(StateType::Started),
+        }];
         sut.pending_status_filter.insert("Todo".into());
         sut.toggle_status_filter(1); // toggle off
         assert!(!sut.pending_status_filter.contains("Todo"));

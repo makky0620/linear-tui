@@ -103,13 +103,19 @@ fn draw_filter(f: &mut Frame, app: &App) {
     let th = &app.theme;
     let (title, items) = match app.filter_kind {
         FilterKind::Status => {
-            let mut items =
-                vec![checkbox_item("All", app.pending_status_filter.is_empty(), th)];
+            let mut items = vec![checkbox_item(
+                "All",
+                app.pending_status_filter.is_empty(),
+                th,
+            )];
             for state in &app.workflow_states {
                 let is_checked = app.pending_status_filter.contains(&state.name);
                 items.push(checkbox_item(&state.name, is_checked, th));
             }
-            (" Filter: Status (Space to toggle, Enter to confirm) ", items)
+            (
+                " Filter: Status (Space to toggle, Enter to confirm) ",
+                items,
+            )
         }
         FilterKind::Priority => {
             let labels = ["All", "Urgent", "High", "Medium", "Low", "None"];
@@ -128,7 +134,11 @@ fn draw_filter(f: &mut Frame, app: &App) {
             (" Filter: Priority ", items)
         }
     };
-    render_popup_list(f, title, items, app.popup_index, 35, th);
+    let width = match app.filter_kind {
+        FilterKind::Status => 54,
+        FilterKind::Priority => 35,
+    };
+    render_popup_list(f, title, items, app.popup_index, width, th);
 }
 
 fn draw_status_change(f: &mut Frame, app: &App) {
