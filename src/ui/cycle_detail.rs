@@ -188,17 +188,17 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
 
     let datasets = vec![
         Dataset::default()
-            .name("Actual")
-            .marker(symbols::Marker::Braille)
-            .graph_type(GraphType::Line)
-            .style(Style::default().fg(th.success))
-            .data(&bd.actual),
-        Dataset::default()
             .name("Ideal")
             .marker(symbols::Marker::Dot)
             .graph_type(GraphType::Line)
             .style(Style::default().fg(th.muted))
             .data(&bd.ideal),
+        Dataset::default()
+            .name("Actual")
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(th.success))
+            .data(&bd.actual),
         Dataset::default()
             .marker(symbols::Marker::Braille)
             .graph_type(GraphType::Line)
