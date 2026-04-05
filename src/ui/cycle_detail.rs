@@ -1,10 +1,11 @@
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
     style::{Modifier, Style},
+    symbols,
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Row, Table, TableState},
+    widgets::{Axis, Block, Borders, Chart, Dataset, GraphType, Paragraph, Row, Table, TableState},
 };
 
 use super::{format_date, issue_list::issue_row};
@@ -78,6 +79,108 @@ pub fn compute_burndown(
     BurndownData { actual, ideal, today_x, total, remaining, using_estimate }
 }
 
+fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
+    let th = &app.theme;
+    let Some(cycle) = &app.current_cycle else {
+        f.render_widget(Block::default().borders(Borders::ALL).title(" Burndown "), area);
+        return;
+    };
+
+    let (Some(starts_at), Some(ends_at)) = (&cycle.starts_at, &cycle.ends_at) else {
+        f.render_widget(Block::default().borders(Borders::ALL).title(" Burndown "), area);
+        return;
+    };
+
+    let today = Local::now().date_naive();
+    let bd = compute_burndown(&app.cycle_issues, starts_at, ends_at, today);
+
+    if bd.total == 0.0 {
+        f.render_widget(
+            Paragraph::new(" No data")
+                .block(Block::default().borders(Borders::ALL).title(" Burndown ")),
+            area,
+        );
+        return;
+    }
+
+    let unit = if bd.using_estimate { "pt" } else { "issues" };
+    let title = format!(
+        " Burndown  {:.0}{} 残り / {:.0}{} 合計 ",
+        bd.remaining, unit, bd.total, unit
+    );
+
+    let total_days = bd.ideal[1].0 as i64;
+    let start = chrono::NaiveDate::parse_from_str(&starts_at[..10], "%Y-%m-%d")
+        .unwrap_or(today);
+    let interval = (total_days / 4).max(1);
+    let x_labels: Vec<Span> = (0..=total_days)
+        .step_by(interval as usize)
+        .map(|d| {
+            let date = start + chrono::Duration::try_days(d).unwrap();
+            Span::styled(
+                date.format("%m/%d").to_string(),
+                Style::default().fg(th.text_dim),
+            )
+        })
+        .collect();
+
+    let y_labels = vec![
+        Span::styled("0", Style::default().fg(th.text_dim)),
+        Span::styled(
+            format!("{:.0}", bd.total / 2.0),
+            Style::default().fg(th.text_dim),
+        ),
+        Span::styled(
+            format!("{:.0}", bd.total),
+            Style::default().fg(th.text_dim),
+        ),
+    ];
+
+    let today_data = vec![(bd.today_x, 0.0), (bd.today_x, bd.total)];
+
+    let datasets = vec![
+        Dataset::default()
+            .name("実績")
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(th.success))
+            .data(&bd.actual),
+        Dataset::default()
+            .name("理想")
+            .marker(symbols::Marker::Dot)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(th.muted))
+            .data(&bd.ideal),
+        Dataset::default()
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(th.error))
+            .data(&today_data),
+    ];
+
+    let chart = Chart::new(datasets)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(title)
+                .title_style(Style::default().fg(th.accent).add_modifier(Modifier::BOLD)),
+        )
+        .x_axis(
+            Axis::default()
+                .style(Style::default().fg(th.text_dim))
+                .bounds([0.0, total_days as f64])
+                .labels(x_labels),
+        )
+        .y_axis(
+            Axis::default()
+                .style(Style::default().fg(th.text_dim))
+                .bounds([0.0, bd.total])
+                .labels(y_labels),
+        );
+
+    f.render_widget(chart, area);
+}
+
 pub fn draw(f: &mut Frame, app: &App, area: Rect) {
     let Some(cycle) = &app.current_cycle else {
         return;
@@ -85,9 +188,10 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
     let th = &app.theme;
 
     let chunks = Layout::vertical([
-        Constraint::Length(3), // cycle info
-        Constraint::Min(0),    // issues table
-        Constraint::Length(1), // footer
+        Constraint::Length(3),  // cycle info
+        Constraint::Length(12), // burndown chart
+        Constraint::Min(0),     // issues table
+        Constraint::Length(1),  // footer
     ])
     .split(area);
 
@@ -120,6 +224,8 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
             .title_style(Style::default().fg(th.accent).add_modifier(Modifier::BOLD)),
     );
     f.render_widget(meta, chunks[0]);
+
+    draw_burndown(f, app, chunks[1]);
 
     // Issues table
     let loading = if app.loading {
@@ -160,7 +266,7 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
 
     let mut table_state = TableState::default();
     table_state.select(Some(app.selected_cycle_issue_index));
-    f.render_stateful_widget(table, chunks[1], &mut table_state);
+    f.render_stateful_widget(table, chunks[2], &mut table_state);
 
     // Footer
     let footer = Paragraph::new(Line::from(vec![
@@ -171,7 +277,7 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
         Span::styled("Enter", Style::default().fg(th.accent)),
         Span::raw(":detail "),
     ]));
-    f.render_widget(footer, chunks[2]);
+    f.render_widget(footer, chunks[3]);
 }
 
 #[cfg(test)]
