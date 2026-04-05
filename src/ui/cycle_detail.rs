@@ -19,6 +19,7 @@ pub struct BurndownData {
     pub total: f64,
     pub remaining: f64,
     pub using_estimate: bool,
+    pub start: NaiveDate,
 }
 
 pub fn compute_burndown(
@@ -29,26 +30,66 @@ pub fn compute_burndown(
 ) -> BurndownData {
     let start = match NaiveDate::parse_from_str(&starts_at[..10], "%Y-%m-%d") {
         Ok(d) => d,
-        Err(_) => return BurndownData { actual: vec![], ideal: vec![], today_x: 0.0, total: 0.0, remaining: 0.0, using_estimate: false },
+        Err(_) => {
+            return BurndownData {
+                actual: vec![],
+                ideal: vec![],
+                today_x: 0.0,
+                total: 0.0,
+                remaining: 0.0,
+                using_estimate: false,
+                start: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+            };
+        }
     };
     let end = match NaiveDate::parse_from_str(&ends_at[..10], "%Y-%m-%d") {
         Ok(d) => d,
-        Err(_) => return BurndownData { actual: vec![], ideal: vec![], today_x: 0.0, total: 0.0, remaining: 0.0, using_estimate: false },
+        Err(_) => {
+            return BurndownData {
+                actual: vec![],
+                ideal: vec![],
+                today_x: 0.0,
+                total: 0.0,
+                remaining: 0.0,
+                using_estimate: false,
+                start: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+            };
+        }
     };
     let total_days = (end - start).num_days();
 
     let estimate_sum: f64 = issues.iter().filter_map(|i| i.estimate).sum();
     let using_estimate = estimate_sum > 0.0;
-    let total = if using_estimate { estimate_sum } else { issues.len() as f64 };
+    let total = if using_estimate {
+        estimate_sum
+    } else {
+        issues.len() as f64
+    };
 
     if total == 0.0 {
-        return BurndownData { actual: vec![], ideal: vec![], today_x: 0.0, total: 0.0, remaining: 0.0, using_estimate };
+        return BurndownData {
+            actual: vec![],
+            ideal: vec![],
+            today_x: 0.0,
+            total: 0.0,
+            remaining: 0.0,
+            using_estimate,
+            start,
+        };
     }
 
     let ideal = vec![(0.0, total), (total_days as f64, 0.0)];
 
     let last_day = if today < start {
-        return BurndownData { actual: vec![], ideal, today_x: 0.0, total, remaining: total, using_estimate };
+        return BurndownData {
+            actual: vec![],
+            ideal,
+            today_x: 0.0,
+            total,
+            remaining: total,
+            using_estimate,
+            start,
+        };
     } else if today > end {
         end
     } else {
@@ -59,7 +100,7 @@ pub fn compute_burndown(
     let days_to_plot = (last_day - start).num_days();
     let mut actual = Vec::with_capacity(days_to_plot as usize + 1);
     for day_idx in 0..=days_to_plot {
-        let day_end = start + chrono::Duration::try_days(day_idx).unwrap();
+        let day_end = start + chrono::Duration::try_days(day_idx).expect("day index out of chrono range");
         let day_end_str = day_end.format("%Y-%m-%d").to_string();
         let completed: f64 = issues
             .iter()
@@ -70,24 +111,44 @@ pub fn compute_burndown(
                     .map(|d| d <= day_end_str.as_str())
                     .unwrap_or(false)
             })
-            .map(|i| if using_estimate { i.estimate.unwrap_or(0.0) } else { 1.0 })
+            .map(|i| {
+                if using_estimate {
+                    i.estimate.unwrap_or(0.0)
+                } else {
+                    1.0
+                }
+            })
             .sum();
         actual.push((day_idx as f64, total - completed));
     }
 
     let remaining = actual.last().map(|&(_, r)| r).unwrap_or(total);
-    BurndownData { actual, ideal, today_x, total, remaining, using_estimate }
+    BurndownData {
+        actual,
+        ideal,
+        today_x,
+        total,
+        remaining,
+        using_estimate,
+        start,
+    }
 }
 
 fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
     let th = &app.theme;
     let Some(cycle) = &app.current_cycle else {
-        f.render_widget(Block::default().borders(Borders::ALL).title(" Burndown "), area);
+        f.render_widget(
+            Block::default().borders(Borders::ALL).title(" Burndown "),
+            area,
+        );
         return;
     };
 
     let (Some(starts_at), Some(ends_at)) = (&cycle.starts_at, &cycle.ends_at) else {
-        f.render_widget(Block::default().borders(Borders::ALL).title(" Burndown "), area);
+        f.render_widget(
+            Block::default().borders(Borders::ALL).title(" Burndown "),
+            area,
+        );
         return;
     };
 
@@ -110,13 +171,12 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
     );
 
     let total_days = bd.ideal[1].0 as i64;
-    let start = chrono::NaiveDate::parse_from_str(&starts_at[..10], "%Y-%m-%d")
-        .unwrap_or(today);
+    let start = bd.start;
     let interval = (total_days / 4).max(1);
     let x_labels: Vec<Span> = (0..=total_days)
         .step_by(interval as usize)
         .map(|d| {
-            let date = start + chrono::Duration::try_days(d).unwrap();
+            let date = start + chrono::Duration::try_days(d).expect("day index out of chrono range");
             Span::styled(
                 date.format("%m/%d").to_string(),
                 Style::default().fg(th.text_dim),
@@ -130,10 +190,7 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
             format!("{:.0}", bd.total / 2.0),
             Style::default().fg(th.text_dim),
         ),
-        Span::styled(
-            format!("{:.0}", bd.total),
-            Style::default().fg(th.text_dim),
-        ),
+        Span::styled(format!("{:.0}", bd.total), Style::default().fg(th.text_dim)),
     ];
 
     let today_data = vec![(bd.today_x, 0.0), (bd.today_x, bd.total)];
@@ -314,7 +371,12 @@ mod tests {
             make_issue(Some(8.0), None),
         ];
         let today = NaiveDate::from_ymd_opt(2026, 3, 5).unwrap();
-        let bd = compute_burndown(&issues, "2026-03-01T00:00:00.000Z", "2026-03-14T00:00:00.000Z", today);
+        let bd = compute_burndown(
+            &issues,
+            "2026-03-01T00:00:00.000Z",
+            "2026-03-14T00:00:00.000Z",
+            today,
+        );
         assert_eq!(bd.total, 13.0);
         // day 0 (Mar 1): nothing completed yet → 13 remaining
         assert_eq!(bd.actual[0], (0.0, 13.0));
@@ -332,7 +394,12 @@ mod tests {
             make_issue(None, None),
         ];
         let today = NaiveDate::from_ymd_opt(2026, 3, 4).unwrap();
-        let bd = compute_burndown(&issues, "2026-03-01T00:00:00.000Z", "2026-03-14T00:00:00.000Z", today);
+        let bd = compute_burndown(
+            &issues,
+            "2026-03-01T00:00:00.000Z",
+            "2026-03-14T00:00:00.000Z",
+            today,
+        );
         assert_eq!(bd.total, 3.0);
         assert!(!bd.using_estimate);
         // day 2: 1 issue completed → 2 remaining
@@ -343,7 +410,12 @@ mod tests {
     fn burndown_empty_when_cycle_not_started() {
         let issues = vec![make_issue(Some(5.0), None)];
         let today = NaiveDate::from_ymd_opt(2026, 2, 28).unwrap();
-        let bd = compute_burndown(&issues, "2026-03-01T00:00:00.000Z", "2026-03-14T00:00:00.000Z", today);
+        let bd = compute_burndown(
+            &issues,
+            "2026-03-01T00:00:00.000Z",
+            "2026-03-14T00:00:00.000Z",
+            today,
+        );
         assert!(bd.actual.is_empty());
         assert_eq!(bd.ideal, vec![(0.0, 5.0), (13.0, 0.0)]);
     }
@@ -352,7 +424,12 @@ mod tests {
     fn burndown_clamps_to_cycle_end() {
         let issues = vec![make_issue(Some(3.0), Some("2026-03-10T00:00:00.000Z"))];
         let today = NaiveDate::from_ymd_opt(2026, 4, 1).unwrap();
-        let bd = compute_burndown(&issues, "2026-03-01T00:00:00.000Z", "2026-03-14T00:00:00.000Z", today);
+        let bd = compute_burndown(
+            &issues,
+            "2026-03-01T00:00:00.000Z",
+            "2026-03-14T00:00:00.000Z",
+            today,
+        );
         assert_eq!(bd.actual.last().unwrap().0, 13.0);
         assert_eq!(bd.today_x, 13.0);
     }
