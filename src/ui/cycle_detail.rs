@@ -22,6 +22,20 @@ pub struct BurndownData {
     pub start: NaiveDate,
 }
 
+impl Default for BurndownData {
+    fn default() -> Self {
+        BurndownData {
+            actual: vec![],
+            ideal: vec![],
+            today_x: 0.0,
+            total: 0.0,
+            remaining: 0.0,
+            using_estimate: false,
+            start: NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+        }
+    }
+}
+
 pub fn compute_burndown(
     issues: &[crate::api::types::Issue],
     starts_at: &str,
@@ -30,31 +44,11 @@ pub fn compute_burndown(
 ) -> BurndownData {
     let start = match NaiveDate::parse_from_str(&starts_at[..10], "%Y-%m-%d") {
         Ok(d) => d,
-        Err(_) => {
-            return BurndownData {
-                actual: vec![],
-                ideal: vec![],
-                today_x: 0.0,
-                total: 0.0,
-                remaining: 0.0,
-                using_estimate: false,
-                start: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
-            };
-        }
+        Err(_) => return BurndownData::default(),
     };
     let end = match NaiveDate::parse_from_str(&ends_at[..10], "%Y-%m-%d") {
         Ok(d) => d,
-        Err(_) => {
-            return BurndownData {
-                actual: vec![],
-                ideal: vec![],
-                today_x: 0.0,
-                total: 0.0,
-                remaining: 0.0,
-                using_estimate: false,
-                start: chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
-            };
-        }
+        Err(_) => return BurndownData::default(),
     };
     let total_days = (end - start).num_days();
 
@@ -134,21 +128,19 @@ pub fn compute_burndown(
     }
 }
 
+fn empty_burndown_block() -> Block<'static> {
+    Block::default().borders(Borders::ALL).title(" Burndown ")
+}
+
 fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
     let th = &app.theme;
     let Some(cycle) = &app.current_cycle else {
-        f.render_widget(
-            Block::default().borders(Borders::ALL).title(" Burndown "),
-            area,
-        );
+        f.render_widget(empty_burndown_block(), area);
         return;
     };
 
     let (Some(starts_at), Some(ends_at)) = (&cycle.starts_at, &cycle.ends_at) else {
-        f.render_widget(
-            Block::default().borders(Borders::ALL).title(" Burndown "),
-            area,
-        );
+        f.render_widget(empty_burndown_block(), area);
         return;
     };
 
@@ -157,8 +149,7 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
 
     if bd.total == 0.0 {
         f.render_widget(
-            Paragraph::new(" No data")
-                .block(Block::default().borders(Borders::ALL).title(" Burndown ")),
+            Paragraph::new(" No data").block(empty_burndown_block()),
             area,
         );
         return;
