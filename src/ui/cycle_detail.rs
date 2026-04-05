@@ -157,7 +157,7 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
 
     let unit = if bd.using_estimate { "pt" } else { "issues" };
     let title = format!(
-        " Burndown  {:.0}{} 残り / {:.0}{} 合計 ",
+        " Burndown  {:.0}{} remaining / {:.0}{} total ",
         bd.remaining, unit, bd.total, unit
     );
 
@@ -188,13 +188,13 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
 
     let datasets = vec![
         Dataset::default()
-            .name("実績")
+            .name("Actual")
             .marker(symbols::Marker::Braille)
             .graph_type(GraphType::Line)
             .style(Style::default().fg(th.success))
             .data(&bd.actual),
         Dataset::default()
-            .name("理想")
+            .name("Ideal")
             .marker(symbols::Marker::Dot)
             .graph_type(GraphType::Line)
             .style(Style::default().fg(th.muted))
