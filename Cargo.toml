@@ -41,6 +41,7 @@ tracing-appender = "0.2"
 
 # Error handling
 anyhow = "1"
+chrono = "0.4"
 
 # Temp files
 tempfile = "3"
