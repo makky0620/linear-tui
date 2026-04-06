@@ -94,7 +94,8 @@ pub fn compute_burndown(
     let days_to_plot = (last_day - start).num_days();
     let mut actual = Vec::with_capacity(days_to_plot as usize + 1);
     for day_idx in 0..=days_to_plot {
-        let day_end = start + chrono::Duration::try_days(day_idx).expect("day index out of chrono range");
+        let day_end =
+            start + chrono::Duration::try_days(day_idx).expect("day index out of chrono range");
         let day_end_str = day_end.format("%Y-%m-%d").to_string();
         let completed: f64 = issues
             .iter()
@@ -167,7 +168,8 @@ fn draw_burndown(f: &mut Frame, app: &App, area: Rect) {
     let x_labels: Vec<Span> = (0..=total_days)
         .step_by(interval as usize)
         .map(|d| {
-            let date = start + chrono::Duration::try_days(d).expect("day index out of chrono range");
+            let date =
+                start + chrono::Duration::try_days(d).expect("day index out of chrono range");
             Span::styled(
                 date.format("%m/%d").to_string(),
                 Style::default().fg(th.text_dim),
