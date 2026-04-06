@@ -15,7 +15,7 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
     let th = &app.theme;
 
     let chunks = Layout::vertical([
-        Constraint::Length(4), // metadata
+        Constraint::Length(5), // metadata
         Constraint::Min(0),    // body + comments
         Constraint::Length(1), // footer
     ])
