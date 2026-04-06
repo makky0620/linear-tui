@@ -319,6 +319,7 @@ mod tests {
         assert_eq!(comments.nodes[0].body, "This is a comment");
         assert!(resp.issue.project.is_some());
         assert!(resp.issue.cycle.is_some());
+        assert_eq!(resp.issue.estimate, Some(3.0));
     }
 
     #[test]

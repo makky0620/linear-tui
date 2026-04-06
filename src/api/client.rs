@@ -184,6 +184,7 @@ impl LinearClient {
                                 user { id name displayName }
                             }
                         }
+                        estimate
                         project { id name }
                         cycle { id name number }
                     }
