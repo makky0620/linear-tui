@@ -54,6 +54,10 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
             .unwrap_or_else(|| format!("#{}", c.number.unwrap_or(0.0)))
     });
     let cycle = cycle_display.as_deref().unwrap_or("-");
+    let estimate = issue
+        .estimate
+        .map(|e| format!("{}", e as u32))
+        .unwrap_or_else(|| "-".to_string());
 
     let meta = Paragraph::new(vec![
         Line::from(vec![
@@ -76,6 +80,9 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
             Span::raw("    "),
             Span::styled("Cycle: ", Style::default().fg(th.text_dim)),
             Span::raw(cycle),
+            Span::raw("    "),
+            Span::styled("Estimate: ", Style::default().fg(th.text_dim)),
+            Span::styled(estimate, Style::default().fg(th.accent)),
         ]),
     ])
     .block(
@@ -170,6 +177,8 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
             Span::raw(":priority "),
             Span::styled("a", Style::default().fg(th.accent)),
             Span::raw(":assign "),
+            Span::styled("E", Style::default().fg(th.accent)),
+            Span::raw(":estimate "),
             Span::styled("c", Style::default().fg(th.accent)),
             Span::raw(":comment "),
             Span::styled("e", Style::default().fg(th.accent)),
