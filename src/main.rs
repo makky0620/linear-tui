@@ -419,6 +419,15 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
                         Err(e) => app.set_error(format!("Failed to create issue: {e}")),
                     }
                 }
+                PendingAction::UpdateEstimate { issue_id, estimate } => {
+                    match client.update_issue_estimate(issue_id, *estimate).await {
+                        Ok(()) => {
+                            app.set_status("Estimate updated");
+                            app.needs_reload = true;
+                        }
+                        Err(e) => app.set_error(format!("Failed to update estimate: {e}")),
+                    }
+                }
             }
             app.loading = false;
         }

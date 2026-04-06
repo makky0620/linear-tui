@@ -4,6 +4,8 @@ use std::collections::BTreeSet;
 
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
+pub const ESTIMATE_VALUES: [f64; 7] = [0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0];
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Tab {
     Issues,
@@ -55,6 +57,7 @@ pub enum Popup {
     StatusChange,
     PriorityChange,
     AssigneeChange,
+    EstimateChange,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -77,6 +80,10 @@ pub enum PendingAction {
     UpdateAssignee {
         issue_id: String,
         assignee_id: Option<String>,
+    },
+    UpdateEstimate {
+        issue_id: String,
+        estimate: Option<f64>,
     },
     CreateComment {
         issue_id: String,
@@ -414,6 +421,13 @@ impl App {
         }
     }
 
+    pub fn open_estimate_change(&mut self) {
+        if self.focused_issue().is_some() {
+            self.popup = Popup::EstimateChange;
+            self.popup_index = 0;
+        }
+    }
+
     pub fn start_comment(&mut self) {
         if self.focused_issue().is_some() {
             self.input_mode = InputMode::Comment;
@@ -516,6 +530,21 @@ impl App {
         self.popup = Popup::None;
     }
 
+    pub fn apply_estimate_selection(&mut self) {
+        if let Some(issue) = self.focused_issue() {
+            let estimate = if self.popup_index == 0 {
+                None // Clear
+            } else {
+                ESTIMATE_VALUES.get(self.popup_index - 1).copied()
+            };
+            self.pending_action = Some(PendingAction::UpdateEstimate {
+                issue_id: issue.id.clone(),
+                estimate,
+            });
+        }
+        self.popup = Popup::None;
+    }
+
     pub fn close_popup(&mut self) {
         self.popup = Popup::None;
     }
@@ -543,6 +572,7 @@ impl App {
             Popup::StatusChange => self.workflow_states.len(),
             Popup::PriorityChange => 5, // None, Urgent, High, Medium, Low
             Popup::AssigneeChange => self.team_members.len() + 1, // +1 for Unassign
+            Popup::EstimateChange => ESTIMATE_VALUES.len() + 1, // +1 for Clear
             Popup::None => 0,
         }
     }
@@ -1110,5 +1140,14 @@ mod tests {
 
         assert_eq!(actual.len(), 1);
         assert_eq!(actual[0].identifier, "ENG-1");
+    }
+
+    #[test]
+    fn estimate_values_length_matches_popup_len() {
+        // ESTIMATE_VALUES has 7 entries; popup_list_len returns 7+1=8
+        assert_eq!(ESTIMATE_VALUES.len(), 7);
+        assert_eq!(ESTIMATE_VALUES[0], 0.0);
+        assert_eq!(ESTIMATE_VALUES[4], 5.0);
+        assert_eq!(ESTIMATE_VALUES[6], 13.0);
     }
 }
