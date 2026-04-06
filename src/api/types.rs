@@ -156,6 +156,10 @@ pub struct Issue {
     pub created_at: Option<String>,
     #[serde(default, rename = "updatedAt")]
     pub updated_at: Option<String>,
+    #[serde(default, rename = "completedAt")]
+    pub completed_at: Option<String>,
+    #[serde(default)]
+    pub estimate: Option<f64>,
     pub comments: Option<Connection<Comment>>,
     pub project: Option<Project>,
     pub cycle: Option<Cycle>,
@@ -457,5 +461,32 @@ mod tests {
             serde_json::from_str::<StateType>("\"cancelled\"").unwrap(),
             StateType::Cancelled
         );
+    }
+
+    #[test]
+    fn deserialize_cycle_issues_with_estimate_and_completed_at() {
+        #[derive(Deserialize)]
+        struct CycleResp {
+            cycle: CycleWithIssues,
+        }
+        #[derive(Deserialize)]
+        struct CycleWithIssues {
+            issues: Connection<Issue>,
+        }
+        let resp: CycleResp = serde_json::from_str(&fixture("cycle_issues.json")).unwrap();
+        let issues = &resp.cycle.issues.nodes;
+        assert_eq!(issues.len(), 3);
+        // issue-001: has estimate and completedAt
+        assert_eq!(issues[0].estimate, Some(5.0));
+        assert_eq!(
+            issues[0].completed_at.as_deref(),
+            Some("2026-03-05T10:00:00.000Z")
+        );
+        // issue-002: has estimate but no completedAt
+        assert_eq!(issues[1].estimate, Some(8.0));
+        assert!(issues[1].completed_at.is_none());
+        // issue-003: no estimate, no completedAt
+        assert!(issues[2].estimate.is_none());
+        assert!(issues[2].completed_at.is_none());
     }
 }

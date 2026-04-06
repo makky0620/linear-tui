@@ -425,6 +425,8 @@ impl LinearClient {
                                 description
                                 createdAt
                                 updatedAt
+                                estimate
+                                completedAt
                             }
                         }
                     }

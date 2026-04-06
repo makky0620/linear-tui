@@ -1,0 +1,57 @@
+{
+  "cycle": {
+    "issues": {
+      "nodes": [
+        {
+          "id": "issue-001",
+          "identifier": "ENG-101",
+          "title": "Auth refactor",
+          "priority": 1,
+          "priorityLabel": "Urgent",
+          "state": {"id": "state-001", "name": "Done", "color": "#5e6ad2", "type": "completed"},
+          "assignee": {"id": "user-001", "name": "Tanaka", "displayName": "tanaka"},
+          "labels": {"nodes": []},
+          "description": null,
+          "createdAt": "2026-03-01T00:00:00.000Z",
+          "updatedAt": "2026-03-05T00:00:00.000Z",
+          "completedAt": "2026-03-05T10:00:00.000Z",
+          "estimate": 5.0
+        },
+        {
+          "id": "issue-002",
+          "identifier": "ENG-102",
+          "title": "API type design",
+          "priority": 2,
+          "priorityLabel": "High",
+          "state": {"id": "state-002", "name": "In Progress", "color": "#f2c94c", "type": "started"},
+          "assignee": {"id": "user-002", "name": "Sato", "displayName": "sato"},
+          "labels": {"nodes": []},
+          "description": null,
+          "createdAt": "2026-03-01T00:00:00.000Z",
+          "updatedAt": "2026-03-10T00:00:00.000Z",
+          "completedAt": null,
+          "estimate": 8.0
+        },
+        {
+          "id": "issue-003",
+          "identifier": "ENG-103",
+          "title": "UI polish",
+          "priority": 3,
+          "priorityLabel": "Medium",
+          "state": {"id": "state-003", "name": "Todo", "color": "#e2e2e2", "type": "unstarted"},
+          "assignee": null,
+          "labels": {"nodes": []},
+          "description": null,
+          "createdAt": "2026-03-01T00:00:00.000Z",
+          "updatedAt": "2026-03-01T00:00:00.000Z",
+          "completedAt": null,
+          "estimate": null
+        }
+      ],
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      }
+    }
+  }
+}

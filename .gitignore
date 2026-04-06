@@ -3,3 +3,6 @@
 /.worktrees
 # Claude
 .claude/settings.local.json
+
+# Junie
+.junie/
