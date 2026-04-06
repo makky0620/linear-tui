@@ -131,6 +131,10 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
                 app.open_assignee_change();
                 return;
             }
+            KeyCode::Char('E') => {
+                app.open_estimate_change();
+                return;
+            }
             _ => {}
         }
     }
@@ -216,7 +220,6 @@ fn handle_issue_detail_keys(app: &mut App, key: KeyEvent) {
         KeyCode::Char('k') | KeyCode::Up => app.scroll_up(),
         KeyCode::Char('g') => app.detail_scroll = 0,
         KeyCode::Char('e') => app.request_description_edit(),
-        KeyCode::Char('E') => app.open_estimate_change(),
         KeyCode::Char('c') => app.start_comment(),
         _ => {}
     }
