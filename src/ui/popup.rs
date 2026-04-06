@@ -16,6 +16,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Popup::StatusChange => draw_status_change(f, app),
         Popup::PriorityChange => draw_priority_change(f, app),
         Popup::AssigneeChange => draw_assignee_change(f, app),
+        Popup::EstimateChange => draw_estimate_change(f, app),
         Popup::None => {}
     }
 }
@@ -181,6 +182,23 @@ fn draw_priority_change(f: &mut Frame, app: &App) {
         .map(|(i, pri)| numbered_item(i, pri.label(), current_pri == Some(*pri), th))
         .collect();
     render_popup_list(f, " Change Priority ", items, app.popup_index, 30, th);
+}
+
+fn draw_estimate_change(f: &mut Frame, app: &App) {
+    use crate::app::ESTIMATE_VALUES;
+    let th = &app.theme;
+    let current_estimate = app.focused_issue().and_then(|i| i.estimate);
+
+    let items: Vec<_> = ESTIMATE_VALUES
+        .iter()
+        .enumerate()
+        .map(|(i, &val)| {
+            let label = format!("{}", val as u32);
+            let is_current = current_estimate == Some(val);
+            numbered_item(i, &label, is_current, th)
+        })
+        .collect();
+    render_popup_list(f, " Change Estimate ", items, app.popup_index, 30, th);
 }
 
 fn draw_assignee_change(f: &mut Frame, app: &App) {

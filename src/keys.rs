@@ -54,6 +54,7 @@ fn handle_popup_keys(app: &mut App, key: KeyEvent) {
             Popup::StatusChange => app.apply_status_selection(),
             Popup::PriorityChange => app.apply_priority_selection(),
             Popup::AssigneeChange => app.apply_assignee_selection(),
+            Popup::EstimateChange => app.apply_estimate_selection(),
             Popup::None => {}
         },
         KeyCode::Char(c @ '1'..='9') => {
@@ -70,6 +71,7 @@ fn handle_popup_keys(app: &mut App, key: KeyEvent) {
                     Popup::StatusChange => app.apply_status_selection(),
                     Popup::PriorityChange => app.apply_priority_selection(),
                     Popup::AssigneeChange => app.apply_assignee_selection(),
+                    Popup::EstimateChange => app.apply_estimate_selection(),
                     Popup::None => {}
                 }
             }
@@ -127,6 +129,10 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Char('a') => {
                 app.open_assignee_change();
+                return;
+            }
+            KeyCode::Char('E') => {
+                app.open_estimate_change();
                 return;
             }
             _ => {}
