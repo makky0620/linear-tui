@@ -518,32 +518,20 @@ impl LinearClient {
             #[serde(rename = "issueUpdate")]
             _issue_update: MutationSuccess,
         }
-        let _: Resp = match estimate {
-            Some(val) => {
-                let variables = serde_json::json!({ "id": issue_id, "estimate": val });
-                self.query(
-                    r#"mutation($id: String!, $estimate: Float!) {
-                        issueUpdate(id: $id, input: { estimate: $estimate }) {
-                            success
-                        }
-                    }"#,
-                    Some(variables),
-                )
-                .await?
-            }
-            None => {
-                let variables = serde_json::json!({ "id": issue_id });
-                self.query(
-                    r#"mutation($id: String!) {
-                        issueUpdate(id: $id, input: { estimate: null }) {
-                            success
-                        }
-                    }"#,
-                    Some(variables),
-                )
-                .await?
-            }
-        };
+        let variables = serde_json::json!({
+            "id": issue_id,
+            "estimate": estimate.map(|e| e as i64),
+        });
+        let _: Resp = self
+            .query(
+                r#"mutation($id: String!, $estimate: Int) {
+                    issueUpdate(id: $id, input: { estimate: $estimate }) {
+                        success
+                    }
+                }"#,
+                Some(variables),
+            )
+            .await?;
         Ok(())
     }
 
