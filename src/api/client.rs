@@ -512,7 +512,7 @@ impl LinearClient {
         Ok(())
     }
 
-    pub async fn update_issue_estimate(&self, issue_id: &str, estimate: Option<f64>) -> Result<()> {
+    pub async fn update_issue_estimate(&self, issue_id: &str, estimate: f64) -> Result<()> {
         #[derive(Deserialize)]
         struct Resp {
             #[serde(rename = "issueUpdate")]
@@ -520,11 +520,11 @@ impl LinearClient {
         }
         let variables = serde_json::json!({
             "id": issue_id,
-            "estimate": estimate.map(|e| e as i64),
+            "estimate": estimate as i64,
         });
         let _: Resp = self
             .query(
-                r#"mutation($id: String!, $estimate: Int) {
+                r#"mutation($id: String!, $estimate: Int!) {
                     issueUpdate(id: $id, input: { estimate: $estimate }) {
                         success
                     }

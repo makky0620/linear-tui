@@ -189,12 +189,15 @@ fn draw_estimate_change(f: &mut Frame, app: &App) {
     let th = &app.theme;
     let current_estimate = app.focused_issue().and_then(|i| i.estimate);
 
-    let mut items = vec![numbered_item(0, "Clear", current_estimate.is_none(), th)];
-    for (i, &val) in ESTIMATE_VALUES.iter().enumerate() {
-        let label = format!("{}", val as u32);
-        let is_current = current_estimate == Some(val);
-        items.push(numbered_item(i + 1, &label, is_current, th));
-    }
+    let items: Vec<_> = ESTIMATE_VALUES
+        .iter()
+        .enumerate()
+        .map(|(i, &val)| {
+            let label = format!("{}", val as u32);
+            let is_current = current_estimate == Some(val);
+            numbered_item(i, &label, is_current, th)
+        })
+        .collect();
     render_popup_list(f, " Change Estimate ", items, app.popup_index, 30, th);
 }
 

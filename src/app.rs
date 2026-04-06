@@ -83,7 +83,7 @@ pub enum PendingAction {
     },
     UpdateEstimate {
         issue_id: String,
-        estimate: Option<f64>,
+        estimate: f64,
     },
     CreateComment {
         issue_id: String,
@@ -532,15 +532,12 @@ impl App {
 
     pub fn apply_estimate_selection(&mut self) {
         if let Some(issue) = self.focused_issue() {
-            let estimate = if self.popup_index == 0 {
-                None // Clear
-            } else {
-                ESTIMATE_VALUES.get(self.popup_index - 1).copied()
-            };
-            self.pending_action = Some(PendingAction::UpdateEstimate {
-                issue_id: issue.id.clone(),
-                estimate,
-            });
+            if let Some(&estimate) = ESTIMATE_VALUES.get(self.popup_index) {
+                self.pending_action = Some(PendingAction::UpdateEstimate {
+                    issue_id: issue.id.clone(),
+                    estimate,
+                });
+            }
         }
         self.popup = Popup::None;
     }
@@ -572,7 +569,7 @@ impl App {
             Popup::StatusChange => self.workflow_states.len(),
             Popup::PriorityChange => 5, // None, Urgent, High, Medium, Low
             Popup::AssigneeChange => self.team_members.len() + 1, // +1 for Unassign
-            Popup::EstimateChange => ESTIMATE_VALUES.len() + 1, // +1 for Clear
+            Popup::EstimateChange => ESTIMATE_VALUES.len(),
             Popup::None => 0,
         }
     }
@@ -1144,7 +1141,7 @@ mod tests {
 
     #[test]
     fn estimate_values_length_matches_popup_len() {
-        // ESTIMATE_VALUES has 7 entries; popup_list_len returns 7+1=8
+        // ESTIMATE_VALUES has 7 entries; popup_list_len returns 7
         assert_eq!(ESTIMATE_VALUES.len(), 7);
         assert_eq!(ESTIMATE_VALUES[0], 0.0);
         assert_eq!(ESTIMATE_VALUES[4], 5.0);
