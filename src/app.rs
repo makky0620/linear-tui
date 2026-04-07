@@ -754,7 +754,9 @@ impl App {
     /// Filter cycles for the cycle-change popup.
     /// `now_date` is a "YYYY-MM-DD" string used for comparison (injected for testability).
     /// Returns: at most 1 most-recent completed cycle + all current/future cycles, sorted by number ascending.
-    pub fn filter_cycles_for_popup(mut cycles: Vec<Cycle>, now_date: &str) -> Vec<Cycle> {
+    #[allow(dead_code)]
+    pub fn filter_cycles_for_popup(cycles: Vec<Cycle>, now_date: &str) -> Vec<Cycle> {
+        let mut cycles = cycles;
         // Sort by number ascending (None treated as 0)
         cycles.sort_by(|a, b| {
             a.number
@@ -782,7 +784,7 @@ impl App {
 
         // Keep only the last past cycle (already sorted ascending, so last = most recent)
         let mut result = Vec::new();
-        if let Some(last_past) = past.into_iter().last() {
+        if let Some(last_past) = past.pop() {
             result.push(last_past);
         }
         result.extend(present_future);
@@ -1223,5 +1225,17 @@ mod tests {
         let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "c1");
+    }
+
+    #[test]
+    fn filter_cycles_all_past_returns_only_most_recent() {
+        use crate::api::types::Cycle;
+        let cycles = vec![
+            Cycle { id: "c1".into(), name: None, number: Some(1.0), starts_at: None, ends_at: Some("2026-01-01T00:00:00.000Z".into()), progress: None, issues: None },
+            Cycle { id: "c2".into(), name: None, number: Some(2.0), starts_at: None, ends_at: Some("2026-02-01T00:00:00.000Z".into()), progress: None, issues: None },
+        ];
+        let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "c2");
     }
 }
