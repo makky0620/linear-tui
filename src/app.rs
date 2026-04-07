@@ -1228,10 +1228,42 @@ mod tests {
     fn filter_cycles_keeps_one_past_and_all_future() {
         use crate::api::types::Cycle;
         let cycles = vec![
-            Cycle { id: "c1".into(), name: Some("Sprint 1".into()), number: Some(1.0), starts_at: None, ends_at: Some("2026-01-01T00:00:00.000Z".into()), progress: None, issues: None },
-            Cycle { id: "c2".into(), name: Some("Sprint 2".into()), number: Some(2.0), starts_at: None, ends_at: Some("2026-02-01T00:00:00.000Z".into()), progress: None, issues: None },
-            Cycle { id: "c3".into(), name: Some("Sprint 3".into()), number: Some(3.0), starts_at: None, ends_at: Some("2026-05-01T00:00:00.000Z".into()), progress: None, issues: None },
-            Cycle { id: "c4".into(), name: Some("Sprint 4".into()), number: Some(4.0), starts_at: None, ends_at: Some("2026-06-01T00:00:00.000Z".into()), progress: None, issues: None },
+            Cycle {
+                id: "c1".into(),
+                name: Some("Sprint 1".into()),
+                number: Some(1.0),
+                starts_at: None,
+                ends_at: Some("2026-01-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c2".into(),
+                name: Some("Sprint 2".into()),
+                number: Some(2.0),
+                starts_at: None,
+                ends_at: Some("2026-02-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c3".into(),
+                name: Some("Sprint 3".into()),
+                number: Some(3.0),
+                starts_at: None,
+                ends_at: Some("2026-05-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c4".into(),
+                name: Some("Sprint 4".into()),
+                number: Some(4.0),
+                starts_at: None,
+                ends_at: Some("2026-06-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
         ];
         // now = 2026-04-07, so c1 and c2 are past, c3 and c4 are future
         let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
@@ -1244,9 +1276,15 @@ mod tests {
     #[test]
     fn filter_cycles_includes_cycle_with_no_ends_at() {
         use crate::api::types::Cycle;
-        let cycles = vec![
-            Cycle { id: "c1".into(), name: None, number: Some(1.0), starts_at: None, ends_at: None, progress: None, issues: None },
-        ];
+        let cycles = vec![Cycle {
+            id: "c1".into(),
+            name: None,
+            number: Some(1.0),
+            starts_at: None,
+            ends_at: None,
+            progress: None,
+            issues: None,
+        }];
         let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "c1");
@@ -1255,9 +1293,15 @@ mod tests {
     #[test]
     fn filter_cycles_no_past_cycles() {
         use crate::api::types::Cycle;
-        let cycles = vec![
-            Cycle { id: "c1".into(), name: None, number: Some(1.0), starts_at: None, ends_at: Some("2026-05-01T00:00:00.000Z".into()), progress: None, issues: None },
-        ];
+        let cycles = vec![Cycle {
+            id: "c1".into(),
+            name: None,
+            number: Some(1.0),
+            starts_at: None,
+            ends_at: Some("2026-05-01T00:00:00.000Z".into()),
+            progress: None,
+            issues: None,
+        }];
         let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "c1");
@@ -1267,8 +1311,24 @@ mod tests {
     fn filter_cycles_all_past_returns_only_most_recent() {
         use crate::api::types::Cycle;
         let cycles = vec![
-            Cycle { id: "c1".into(), name: None, number: Some(1.0), starts_at: None, ends_at: Some("2026-01-01T00:00:00.000Z".into()), progress: None, issues: None },
-            Cycle { id: "c2".into(), name: None, number: Some(2.0), starts_at: None, ends_at: Some("2026-02-01T00:00:00.000Z".into()), progress: None, issues: None },
+            Cycle {
+                id: "c1".into(),
+                name: None,
+                number: Some(1.0),
+                starts_at: None,
+                ends_at: Some("2026-01-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c2".into(),
+                name: None,
+                number: Some(2.0),
+                starts_at: None,
+                ends_at: Some("2026-02-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
         ];
         let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
         assert_eq!(result.len(), 1);

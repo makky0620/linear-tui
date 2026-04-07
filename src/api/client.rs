@@ -536,6 +536,7 @@ impl LinearClient {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn update_issue_cycle(&self, issue_id: &str, cycle_id: &str) -> Result<()> {
         #[derive(Deserialize)]
         struct Resp {
