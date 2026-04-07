@@ -17,6 +17,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Popup::PriorityChange => draw_priority_change(f, app),
         Popup::AssigneeChange => draw_assignee_change(f, app),
         Popup::EstimateChange => draw_estimate_change(f, app),
+        Popup::CycleChange => {} // placeholder until draw_cycle_change is implemented
         Popup::None => {}
     }
 }

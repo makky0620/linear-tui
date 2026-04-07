@@ -58,6 +58,8 @@ pub enum Popup {
     PriorityChange,
     AssigneeChange,
     EstimateChange,
+    #[allow(dead_code)]
+    CycleChange,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -96,6 +98,11 @@ pub enum PendingAction {
     CreateIssue {
         team_id: String,
         title: String,
+    },
+    #[allow(dead_code)]
+    UpdateCycle {
+        issue_id: String,
+        cycle_id: String,
     },
 }
 
@@ -146,6 +153,7 @@ pub struct App {
     pub teams: Vec<Team>,
     pub selected_team_index: usize,
     pub team_members: Vec<User>,
+    pub popup_cycles: Vec<Cycle>,
 
     // Issues
     pub issues: Vec<Issue>,
@@ -234,6 +242,7 @@ impl App {
             teams: Vec::new(),
             selected_team_index: 0,
             team_members: Vec::new(),
+            popup_cycles: Vec::new(),
             issues: Vec::new(),
             filtered_issues: Vec::new(),
             selected_issue_index: 0,
@@ -428,6 +437,27 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn open_cycle_change(&mut self) {
+        if self.focused_issue().is_some() {
+            self.popup = Popup::CycleChange;
+            self.popup_cycles.clear();
+            self.popup_index = 0;
+        }
+    }
+
+    pub fn apply_cycle_selection(&mut self) {
+        if let Some(issue) = self.focused_issue() {
+            if let Some(cycle) = self.popup_cycles.get(self.popup_index) {
+                self.pending_action = Some(PendingAction::UpdateCycle {
+                    issue_id: issue.id.clone(),
+                    cycle_id: cycle.id.clone(),
+                });
+            }
+        }
+        self.close_popup();
+    }
+
     pub fn start_comment(&mut self) {
         if self.focused_issue().is_some() {
             self.input_mode = InputMode::Comment;
@@ -570,6 +600,7 @@ impl App {
             Popup::PriorityChange => 5, // None, Urgent, High, Medium, Low
             Popup::AssigneeChange => self.team_members.len() + 1, // +1 for Unassign
             Popup::EstimateChange => ESTIMATE_VALUES.len(),
+            Popup::CycleChange => self.popup_cycles.len(),
             Popup::None => 0,
         }
     }
@@ -789,6 +820,12 @@ impl App {
         }
         result.extend(present_future);
         result
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new(Theme::from_name(crate::config::ThemeName::Default))
     }
 }
 
@@ -1237,5 +1274,35 @@ mod tests {
         let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "c2");
+    }
+
+    #[test]
+    fn open_cycle_change_sets_popup() {
+        let mut app = App {
+            issues: vec![crate::api::types::Issue {
+                id: "i1".into(),
+                identifier: "ENG-1".into(),
+                title: "Test".into(),
+                priority: crate::api::types::Priority::None,
+                priority_label: None,
+                state: None,
+                assignee: None,
+                labels: None,
+                description: None,
+                created_at: None,
+                updated_at: None,
+                comments: None,
+                project: None,
+                cycle: None,
+                estimate: None,
+                completed_at: None,
+            }],
+            selected_issue_index: 0,
+            ..App::default()
+        };
+        app.open_cycle_change();
+        assert_eq!(app.popup, Popup::CycleChange);
+        assert_eq!(app.popup_index, 0);
+        assert!(app.popup_cycles.is_empty());
     }
 }

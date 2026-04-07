@@ -428,6 +428,9 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
                         Err(e) => app.set_error(format!("Failed to create issue: {e}")),
                     }
                 }
+                PendingAction::UpdateCycle { .. } => {
+                    // Placeholder: wired in Task 6
+                }
             }
             app.loading = false;
         }
