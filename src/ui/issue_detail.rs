@@ -179,6 +179,8 @@ pub fn draw(f: &mut Frame, app: &App, area: Rect) {
             Span::raw(":assign "),
             Span::styled("E", Style::default().fg(th.accent)),
             Span::raw(":estimate "),
+            Span::styled("C", Style::default().fg(th.accent)),
+            Span::raw(":cycle "),
             Span::styled("c", Style::default().fg(th.accent)),
             Span::raw(":comment "),
             Span::styled("e", Style::default().fg(th.accent)),
