@@ -58,7 +58,6 @@ pub enum Popup {
     PriorityChange,
     AssigneeChange,
     EstimateChange,
-    #[allow(dead_code)]
     CycleChange,
 }
 
@@ -455,7 +454,7 @@ impl App {
                 });
             }
         }
-        self.close_popup();
+        self.popup = Popup::None;
     }
 
     pub fn start_comment(&mut self) {
