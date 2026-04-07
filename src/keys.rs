@@ -137,6 +137,10 @@ fn handle_normal_mode(app: &mut App, key: KeyEvent) {
                 app.open_estimate_change();
                 return;
             }
+            KeyCode::Char('C') => {
+                app.open_cycle_change();
+                return;
+            }
             _ => {}
         }
     }
