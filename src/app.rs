@@ -58,6 +58,7 @@ pub enum Popup {
     PriorityChange,
     AssigneeChange,
     EstimateChange,
+    CycleChange,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -96,6 +97,11 @@ pub enum PendingAction {
     CreateIssue {
         team_id: String,
         title: String,
+    },
+    #[allow(dead_code)]
+    UpdateCycle {
+        issue_id: String,
+        cycle_id: String,
     },
 }
 
@@ -146,6 +152,7 @@ pub struct App {
     pub teams: Vec<Team>,
     pub selected_team_index: usize,
     pub team_members: Vec<User>,
+    pub popup_cycles: Vec<Cycle>,
 
     // Issues
     pub issues: Vec<Issue>,
@@ -234,6 +241,7 @@ impl App {
             teams: Vec::new(),
             selected_team_index: 0,
             team_members: Vec::new(),
+            popup_cycles: Vec::new(),
             issues: Vec::new(),
             filtered_issues: Vec::new(),
             selected_issue_index: 0,
@@ -428,6 +436,27 @@ impl App {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn open_cycle_change(&mut self) {
+        if self.focused_issue().is_some() {
+            self.popup = Popup::CycleChange;
+            self.popup_cycles.clear();
+            self.popup_index = 0;
+        }
+    }
+
+    pub fn apply_cycle_selection(&mut self) {
+        if let Some(issue) = self.focused_issue() {
+            if let Some(cycle) = self.popup_cycles.get(self.popup_index) {
+                self.pending_action = Some(PendingAction::UpdateCycle {
+                    issue_id: issue.id.clone(),
+                    cycle_id: cycle.id.clone(),
+                });
+            }
+        }
+        self.popup = Popup::None;
+    }
+
     pub fn start_comment(&mut self) {
         if self.focused_issue().is_some() {
             self.input_mode = InputMode::Comment;
@@ -570,6 +599,7 @@ impl App {
             Popup::PriorityChange => 5, // None, Urgent, High, Medium, Low
             Popup::AssigneeChange => self.team_members.len() + 1, // +1 for Unassign
             Popup::EstimateChange => ESTIMATE_VALUES.len(),
+            Popup::CycleChange => self.popup_cycles.len(),
             Popup::None => 0,
         }
     }
@@ -749,6 +779,52 @@ impl App {
             self.selected_cycle_issue_index = 0;
             self.screen = Screen::CycleDetail;
         }
+    }
+
+    /// Filter cycles for the cycle-change popup.
+    /// `now_date` is a "YYYY-MM-DD" string used for comparison (injected for testability).
+    /// Returns: at most 1 most-recent completed cycle + all current/future cycles, sorted by number ascending.
+    #[allow(dead_code)]
+    pub fn filter_cycles_for_popup(cycles: Vec<Cycle>, now_date: &str) -> Vec<Cycle> {
+        let mut cycles = cycles;
+        // Sort by number ascending (None treated as 0)
+        cycles.sort_by(|a, b| {
+            a.number
+                .unwrap_or(0.0)
+                .partial_cmp(&b.number.unwrap_or(0.0))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut past: Vec<Cycle> = Vec::new();
+        let mut present_future: Vec<Cycle> = Vec::new();
+
+        for cycle in cycles {
+            let ended = cycle
+                .ends_at
+                .as_deref()
+                .and_then(|s| s.get(..10))
+                .map(|date| date < now_date)
+                .unwrap_or(false);
+            if ended {
+                past.push(cycle);
+            } else {
+                present_future.push(cycle);
+            }
+        }
+
+        // Keep only the last past cycle (already sorted ascending, so last = most recent)
+        let mut result = Vec::new();
+        if let Some(last_past) = past.pop() {
+            result.push(last_past);
+        }
+        result.extend(present_future);
+        result
+    }
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new(Theme::from_name(crate::config::ThemeName::Default))
     }
 }
 
@@ -1146,5 +1222,146 @@ mod tests {
         assert_eq!(ESTIMATE_VALUES[0], 0.0);
         assert_eq!(ESTIMATE_VALUES[4], 5.0);
         assert_eq!(ESTIMATE_VALUES[6], 13.0);
+    }
+
+    #[test]
+    fn filter_cycles_keeps_one_past_and_all_future() {
+        use crate::api::types::Cycle;
+        let cycles = vec![
+            Cycle {
+                id: "c1".into(),
+                name: Some("Sprint 1".into()),
+                number: Some(1.0),
+                starts_at: None,
+                ends_at: Some("2026-01-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c2".into(),
+                name: Some("Sprint 2".into()),
+                number: Some(2.0),
+                starts_at: None,
+                ends_at: Some("2026-02-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c3".into(),
+                name: Some("Sprint 3".into()),
+                number: Some(3.0),
+                starts_at: None,
+                ends_at: Some("2026-05-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c4".into(),
+                name: Some("Sprint 4".into()),
+                number: Some(4.0),
+                starts_at: None,
+                ends_at: Some("2026-06-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+        ];
+        // now = 2026-04-07, so c1 and c2 are past, c3 and c4 are future
+        let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
+        assert_eq!(result.len(), 3); // c2 (last past), c3, c4
+        assert_eq!(result[0].id, "c2");
+        assert_eq!(result[1].id, "c3");
+        assert_eq!(result[2].id, "c4");
+    }
+
+    #[test]
+    fn filter_cycles_includes_cycle_with_no_ends_at() {
+        use crate::api::types::Cycle;
+        let cycles = vec![Cycle {
+            id: "c1".into(),
+            name: None,
+            number: Some(1.0),
+            starts_at: None,
+            ends_at: None,
+            progress: None,
+            issues: None,
+        }];
+        let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "c1");
+    }
+
+    #[test]
+    fn filter_cycles_no_past_cycles() {
+        use crate::api::types::Cycle;
+        let cycles = vec![Cycle {
+            id: "c1".into(),
+            name: None,
+            number: Some(1.0),
+            starts_at: None,
+            ends_at: Some("2026-05-01T00:00:00.000Z".into()),
+            progress: None,
+            issues: None,
+        }];
+        let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "c1");
+    }
+
+    #[test]
+    fn filter_cycles_all_past_returns_only_most_recent() {
+        use crate::api::types::Cycle;
+        let cycles = vec![
+            Cycle {
+                id: "c1".into(),
+                name: None,
+                number: Some(1.0),
+                starts_at: None,
+                ends_at: Some("2026-01-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+            Cycle {
+                id: "c2".into(),
+                name: None,
+                number: Some(2.0),
+                starts_at: None,
+                ends_at: Some("2026-02-01T00:00:00.000Z".into()),
+                progress: None,
+                issues: None,
+            },
+        ];
+        let result = App::filter_cycles_for_popup(cycles, "2026-04-07");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "c2");
+    }
+
+    #[test]
+    fn open_cycle_change_sets_popup() {
+        let mut app = App {
+            issues: vec![crate::api::types::Issue {
+                id: "i1".into(),
+                identifier: "ENG-1".into(),
+                title: "Test".into(),
+                priority: crate::api::types::Priority::None,
+                priority_label: None,
+                state: None,
+                assignee: None,
+                labels: None,
+                description: None,
+                created_at: None,
+                updated_at: None,
+                comments: None,
+                project: None,
+                cycle: None,
+                estimate: None,
+                completed_at: None,
+            }],
+            selected_issue_index: 0,
+            ..App::default()
+        };
+        app.open_cycle_change();
+        assert_eq!(app.popup, Popup::CycleChange);
+        assert_eq!(app.popup_index, 0);
+        assert!(app.popup_cycles.is_empty());
     }
 }

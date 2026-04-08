@@ -17,7 +17,7 @@ use crossterm::{
 use ratatui::{Terminal, backend::CrosstermBackend};
 
 use api::client::LinearClient;
-use app::{App, InputMode, PendingAction, Screen, Tab};
+use app::{App, InputMode, PendingAction, Popup, Screen, Tab};
 use auth::token::TokenStore;
 use config::Config;
 
@@ -334,6 +334,26 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
             app.loading = false;
         }
 
+        // Cycle change popup: fetch cycles if not yet loaded
+        if app.popup == Popup::CycleChange && app.popup_cycles.is_empty() {
+            if let Some(team) = app.current_team() {
+                let team_id = team.id.clone();
+                app.loading = true;
+                terminal.draw(|f| ui::draw(f, &app))?;
+                match client.cycles(&team_id).await {
+                    Ok(cycles) => {
+                        let now_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
+                        app.popup_cycles = App::filter_cycles_for_popup(cycles, &now_date);
+                    }
+                    Err(e) => {
+                        app.set_error(format!("Failed to load cycles: {e}"));
+                        app.close_popup();
+                    }
+                }
+                app.loading = false;
+            }
+        }
+
         // Execute pending mutations
         if let Some(action) = app.pending_action.take() {
             app.loading = true;
@@ -426,6 +446,20 @@ async fn run_tui(client: LinearClient, config: Config) -> Result<()> {
                             app.needs_reload = true;
                         }
                         Err(e) => app.set_error(format!("Failed to create issue: {e}")),
+                    }
+                }
+                PendingAction::UpdateCycle { issue_id, cycle_id } => {
+                    match client.update_issue_cycle(issue_id, cycle_id).await {
+                        Ok(()) => {
+                            app.set_status("Cycle updated");
+                            // Reload detail to show updated cycle
+                            if app.screen == Screen::IssueDetail {
+                                if let Some(issue) = &mut app.current_issue {
+                                    issue.comments = None; // triggers detail reload
+                                }
+                            }
+                        }
+                        Err(e) => app.set_error(format!("Failed to update cycle: {e}")),
                     }
                 }
             }

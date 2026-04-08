@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
 };
 
 use crate::app::{App, FilterKind, Popup};
@@ -17,6 +17,7 @@ pub fn draw(f: &mut Frame, app: &App) {
         Popup::PriorityChange => draw_priority_change(f, app),
         Popup::AssigneeChange => draw_assignee_change(f, app),
         Popup::EstimateChange => draw_estimate_change(f, app),
+        Popup::CycleChange => draw_cycle_change(f, app),
         Popup::None => {}
     }
 }
@@ -227,4 +228,37 @@ fn draw_assignee_change(f: &mut Frame, app: &App) {
         ));
     }
     render_popup_list(f, " Change Assignee ", items, app.popup_index, 40, th);
+}
+
+fn draw_cycle_change(f: &mut Frame, app: &App) {
+    let th = &app.theme;
+    let current_cycle_id = app
+        .focused_issue()
+        .and_then(|i| i.cycle.as_ref())
+        .map(|c| c.id.as_str());
+
+    let items: Vec<ListItem> = app
+        .popup_cycles
+        .iter()
+        .enumerate()
+        .map(|(i, cycle)| {
+            let label = cycle
+                .name
+                .clone()
+                .unwrap_or_else(|| format!("#{}", cycle.number.unwrap_or(0.0) as u32));
+            numbered_item(i, &label, current_cycle_id == Some(cycle.id.as_str()), th)
+        })
+        .collect();
+
+    if items.is_empty() {
+        let area = centered_rect(30, 3, f.area());
+        f.render_widget(Clear, area);
+        f.render_widget(
+            Paragraph::new("Loading cycles...").block(Block::default().borders(Borders::ALL)),
+            area,
+        );
+        return;
+    }
+
+    render_popup_list(f, " Change Cycle ", items, app.popup_index, 40, th);
 }
